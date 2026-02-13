@@ -1,0 +1,605 @@
+---
+title: "Análise Multivariada"
+subtitle: "Análise de Correspondências Múltiplas e Análise de Cluster"
+author: "Daniela Craveiro"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+### Introdução
+
+A Análise de Correspondências Múltiplas (ACM) é usada para dar sentido a um conjunto de dados multivariados categóricos (ou tratados como tal). É basicamente, uma técnica de análise descritiva de dados multivariados. Tem a grande vantagem de permitir a criação de mapas percetuais, isto é, de representações gráficas de espaços multidimensionais onde as categorias (de variáveis) e os objetos (observações) podem ser representados em função da sua semelhança ou proximidade. Técnicas como a Análise de Componentes Principiais Categóricas ou a Análise de Escalonamento Multidimensional (Multidimensional Scaling Analysis) têm aplicações muito (e até etapas interpretativas) semelhantes sendo, contudo, suportadas por princípios matemáticos diferentes. A ACM é considerada uma técnica particularmente flexível para analisar conjunto de dados categóricos multivariados, pela flexibilidade de gerar quantificações para as categoria e para sujeitos e por ponderar nas medidas de semelhança o número de casos em cada categoria (CADIRET ET AL. 2011).
+
+A ACM transforma os dados categóricos em dados quantitativos, com um processo que tem como objetivo de gerar "quantificações ótimas" simultaneamente para objetos (tipicamente os sujeitos ou observações, a linhas na nossa base de dados) e para os categoriais (das variáveis incluídas na análise) (Carvalho, 2008). A técnica parte da tabela de correspondências (daí o nome) que resulta do cruzamento das observações e das categorias de resposta. Para cada variável gera-se uma matriz binária de presenças ausências, sendo que da justaposição de todas as matrizes resulta a matriz global em que se cruzam todos os objetos (linhas, tipicamente os participantes) por todas as categorias (soma das categorias de todas as variáveis incluídas) (CADIRET ET AL. 2011).
+
+Com base nessas matrizes são geradas quantificações para os objetos (que chamamos de score) e para as categorias, que permitem representar da melhor forma a relação entre as variáveis e as unidades de análise. Estas estimativas são geradas aplicando o princípio matemático das médias recíprocas, que relacionam as quantificações das categoriais e o dos objetos, de forma que a quantificação de uma categoria "é igual à média dos scores dos objetos que nelas se inserem, ponderada pela frequência de ocorrência das categorias" (CARVALHO, 2008, P.44), e portanto, os "scores dos objetos são proporcionais à medida das quantificações das categoriais associadas a cada objeto", CARVALHO, 2008, P.45). Com a ACM, vai-se otimizando essas quantificações com a aplicação iterativa dos princípios das medidas reciprocas, que vai aproximando as quantificações das categorias com as dos objetos que em termos médios os representam. As quantificações vão sendo estimadas alternadamente até ser obtida a solução ótima, isto é, a solução que minimiza essas diferenças e maximiza a homogeneidade ou a identificação de perfis homogéneos (CARVALHO, 2008, P.50). Assim sendo, os objetos (ou sujeitos) com padrões de resposta semelhantes (categorias que os caracterizam) têm quantificações semelhantes, ao mesmo tempo que categorias reportadas pelos mesmos objetos (participantes) têm quantificações semelhantes.
+
+Estas quantificações são usadas como coordenadas em representações gráficas (que podem ser chamados de mapas ou planos percetuais), permitindo identificar que características estão relacionadas entre si e se existem perfis de resposta muito distintos. Outra característica importante desta análise remete para a forma como dá conta da multidimensionalidade dos dados qualitativos. Tal como a Análise de Componentes Principais (ACP), a ACM permite explorar a estrutura interna dos dados, identificando um conjunto menor de dimensões que permitam reduzir e representar o fenómeno em estudo (as quantificações das categoriais e dos objetos descritas em cima, são geradas para cada uma dessas dimensões). A aplicação de uma ACM inclui as tarefas de identificar o número de dimensões a reter, a interpretação de cada umas das dimensões, a análise da configuração das categoriais e a análise da configuração dos objetos. Na próxima seção são elencadas as principais opções e critérios de decisão para uma aplicação de um ACM, cujos resultados são explorados em articulação com uma análise de clusters, numa abordagem semelhante à proposta por CARVALHO (2008).
+
+### Como se aplica? As etapas de uma análise de correspondências múltiplas
+
+Tal como as restantes análises multivariadas consideradas neste módulo, a Análise de Correspondências Múltiplas tem uma componente exploratória e interpretativa que obriga à ponderação de várias opções. Podemos organizar uma Análise de Clusters em função de 6 grandes etapas.
+
+-   Em primeiro lugar, é importante definir os objetivos da análise, especificando as questões de investigação em jogo, bem como e os critérios de seleção na escolha das variáveis. A clareza conceptual dos objetivos na análise deve informar as variáveis a serem consideradas. Neste tipo de análise, consideram-se variáveis categóricas que permitam descrever o fenómeno em estudo. Importa também assegurar que os dados disponíveis são adequados à análise. Ainda que ACM não seja uma análise inferencial, é importante refletir sobre a adequabilidade da amostra, a presença de categorias residuais (que podem distorcer o plano do mapa percetivo) e a presença de multicolinearidade entre as variáveis. Os seguintes critérios devem ser assegurados: • A seleção da amostra deve responder aos objetivos da análise. Nesse sentido é importante assegurar que a amostra representa a diversidade da população a que se refere -- deve ser de tamanho que assegure a representação de grupos minoritárias. • Variáveis com categoriais com casos residuais devem ser analisadas, ponderando a agregação de categorias ou a omissão da variável; no caso de a categoria residual ser uma não resposta pode-se ainda ponderar a substituição da omissão pela moda.
+
+-   Na segunda etapa é importante identificar quantas dimensões devem ser retidos para responder à questão de investigação. Para avaliar a qualidade as dimensões, deve-se ter em atenção a variância explicada por cada uma delas. Essa informação pode ser obtida pelos valores próprios (eighen values) e pelos valores da inercia explicada. Os valores próprios quantificam a variância explicada por dimensão, ao passo que que a inércia resulta da divisão destes valores pelo número de variáveis ativas. Ambos são relevantes, mas a inércia por representar a variância explicada em termos relativos é mais fácil de interpretar. Num exercício semelhante ao gráfico da gravilha (AFE), deve-se analisar a evolução dos valores de inércia em função do numero de dimensões retidos de forma a identificar o ponto em que as descidas deixam de ser acentuadas e reter para a análise o numero de dimensões anterior.
+
+    Tal como noutras análise multivariadas, não existe um critério objetivo claro para esta tarefa. Critérios empíricos, como a variância explicada bem como critérios teóricos, como a interpretabilidade das dimensões, devem informar esta decisão. Em geral, tende-se a privilegiar soluções com poucas dimensões para tornar partido do uso dos mapas percetivos e tornar a análise mais interpretável, sendo os planos bidimensionais os mais comumente explorados, não sendo, contudo essa a solução mais representativa dos dados.
+
+-   Depois de identificar quantas dimensões devem ser retidas para analisar os dados, procede-se com a interpretação das dimensões. A esse nível concentramo-nos nas medidas de discriminação de cada variável, que quantificam a variância de cada variável, depois de ter sido operado o processo de quantificação ótima, referido na seção seguinte. As medidas de discriminação são calculadas em cada dimensão, em função das quantificações das categorias dessa variável, ponderadas pela sua frequência. Os valores variam entre 0 e 1, sendo que quanto mais perto de 1 mais a variável é considerada discriminantes ou determinantes para uma dimensão.
+
+    Para identificar as variáveis mais relevantes para cada dimensão, pode-se ter como como referência o valor da inércia, admitindo que as variáveis com medidas de discriminação acima desse valor são empiricamente relevantes para a sua constituição (CARVALHO, 2008). Neste processo interpretativo deve-se identificar as variáveis que contribuem para cada dimensão e, entre essas, as que mais contribuem para essa dimensão. Com base nessa informação, é importante identificar o conteúdo latente dessa dimensão, no fundo nomear o tema dessa dimensão (este exercício pode ser facilitado com o mapeamento do posicionamento das categoriais mais distintivas pela dimensão). Note-se que, nesta etapa, o objetivo da análise é de identificar um "sistema de variáveis tematicamente consiste" que permitam estruturar a análise dos dados, como eixos interpretativos. Isto implica que, por um lado, a análise das medidas de discriminação pode justificar a eliminação de variáveis não discriminantes da análise final, e que em casos mais ambíguos justifica-se que algumas variáveis possam ser consideradas como contribuintes para uma dimensão pela coerência teórica, apesar de não ser onde mais discriminam.
+
+-   Feita a interpretação dos eixos de interpretação da análise, procura-se interpretar as configurações das categorias para a identificação de grupos ou perfis. Esta análise é baseada no estudo das quantificações das categorias. Um primeiro exercício útil consiste em identificar que categorias são posicionadas de forma oposta face ao eixo -- no fundo que categoriais apresenta quantificações positivas e negativas face a cada dimensão. A este nível, devemos concentrar a análise nas categorias das variáveis mais discriminantes com as quantificações mais altas (pontos mais afastados da origem nos planos gráficos). A análise gráfica permite potenciar o valor interpretativo da ACM, especialmente com o uso dos planos bidimensionais (estes podem ser gerados mesmo em soluções com mais do que 2 dimensões, representando a relação entre pares de dimensões). Nesses planos, a identificação das categoriais presentes em cada quadrante do gráfico é também um exercício elucidativo para a compreensão da composição interna das dimensões.
+
+    A representação gráfica das quantificações das categorias permite identificar de forma visual a existência de agregados ou conjuntos de categoriais que diferentes tipos de objetos. Tal como a interpretação das dimensões, é interessante procurar nomear os perfis identificados. Feita a compreensão desses aglomerados, é possível projetar as quantificações dos objetos e de outras variáveis no mesmo plano. Com esse exercício é possível identificar onde se concentram as observações e como se distinguem em função das dimensões geradas pela análise. Existe ainda a possibilidade de gerar as coordenadas (ou quantificações) para variáveis não incluídas na análise, nesse mesmo plano. Esta possibilidade permite, dar suporte a processos de validação da análise. A proximidade dos pontos dos objetos e das categoriais face aos eixos e face aos aglomerados de categorias informa sobre a sua relativa semelhança.
+
+-   Para além das análises gráficas, podemos estudar tendências e relações entre as dimensões que estruturam os dados com outras informações sobre o fenómeno em estudo. A ACM transforma os dados categóricos em variáveis quantitativas (dimensões), estas últimas podem ser usadas para análises complementares, comparando grupos ou analisando a capacidade dessas variáveis de capturar diferentes perfis, introduzindo essa informação numa análise de clusters, se viável e pertinente.
+
+-   A articulação da ACM com a AC s é uma abordagem com uma grande potencial analítico. É descrito por CARVALHO (2008) em detalhe. A Análise de Custers (AC) permite identificar grupos ou perfis de casos que sejam próximos entre si. Enquanto técnica estatística pode ser útil na análise exploratória de dados ou como suporte a análises inferenciais. Pode ser aplicada para reduzir e dar sentido a um conjunto multivariado de dados, na medida em que permite classificar um conjunto de casos ou sujeitos num número menor de grupos (clusters), ou para analisar a estrutura dos dados e gerar taxonomias. A AC tem várias aplicações nas ciências naturais, nas ciências da saúde ou nas ciências sociais, sendo muito relevante na análise dos grandes dados, em que a clusterização (clustering) é particularmente útil para o reconhecimento de padrões, análise de imagens ou modelos de aprendizagem não supervisionada (machine learning). Este exercício, pode ser operado em dados métricos e nominais, mas por motivos de simplificação neste capítulo aborda-se apenas a análise aplicável ao nível de dados métricos.
+
+    A identificação de grupos, perfis ou padrões de resposta pode ser realizado de várias formas. As abordagens mais comuns partem da formalização (matemática) de medidas de semelhança entre casos e da identificação de configurações que minimizam as distâncias entre os elementos do mesmo grupo. Esta semelhança "interobjectos" pode ser estudada com medidas de correlação e medidas de distância. As medidas de correlação focam-se nos padrões de respostas das observações (sinalizando observações com padrões mais ou menos semelhantes entre si), ao passo que as medidas de distância focam-se nas magnitudes das respostas (sinalizando proximidades entre observações com o mesmo tipo de valores). A semelhança/proximidade entre observações é central na análise de clusters, tornando as medidas de distância conceptualmente mais próximas e talvez por isso, as tipicamente usadas na análise de clusters (HAIR ET AL, 2014).
+
+    Existem várias medidas de distância aplicáveis na análise. De alguma forma, estas valores referem-se à distância entre observações (ou entre as respetivas coordenadas) quando representadas graficamente em função de pares de variáveis. Desta forma é possível calcular a distância euclidiana (hipotenusa do triângulo criando em função das coordenadas das observações em dois eixos), distância euclidiana ao quadrado, distância de Manhattan (soma dos catetos do triângulo criando em função das coordenadas das observações em dois eixos) ou distância de Mahalanobis (distância ajustada à correlação entre variáveis). A análise de clusters é um termo genérico para vários métodos numéricos que permitem a operacionalização dessa tarefa (EVERITT & HORTON, 2011). Podemos identificar dois grandes tipos de métodos de agrupamento: os métodos hierárquicos e os métodos não hierárquicos.
+
+    Os métodos hierárquicos operam com base num processo sequencial em que, em cada etapa, a classificação de observações em clusters vai progredindo, com base nas medidas semelhança de cada uma das observações face às restantes. A operação pode ser realizada com base em métodos aglomerativos (agglomerative) ou divisivos (divise). No primeiro caso, a agregação começa com cada observação num cluster distinto, sendo que em cada etapa os dois clusters mais semelhantes entre si são agrupados num só até chegar à solução de um cluster comum. No segundo, a agregação começa com todas as observações num cluster comum, sendo que em cada etapa é dividido do elemento mais distintivo, até chegar-se à solução em que todas as observações são um cluster distinto. Pelo carater sequencial, os resultados dos métodos hierárquicos geram gamas completas de soluções, em função de determinada medida de semelhança e algoritmo de aglomeração (ligação simples/vizinho mais perto, ligação completa, ligação média, método centróide, método de Ward ).
+
+    Os métodos não hierárquicos, por sua vez, partem da categorização dos objetos procurando a solução ótima para uma solução de determinado número de clusters. O processo de categorização parte então pela identificação de observações que servem de ponto de partida (cluster seeds) e da alocação das observações com base num algoritmo (sequencial, paralelo, optimização) em função dos grupos pré-estabelecidos (HAIR ET AL, 2014).
+
+    A seleção de um tipo de método face ao outro deve depender da análise. Os métodos hierárquicos estão há mais tempo estabelecidos na literatura, existindo por isso mais referências e opções nos softwares estatísticos para os implementar, para além de assegurarem a apresentação da gama total de soluções numa única análise. Por outro lado, são mais sensíveis a observações extremas, à escolha da medida de distância ou à consideração de variáveis não relevantes, e exigem algum poder computacional. Os métodos não hierárquicos parecem assegurar soluções mais consistentes e menos computacionalmente exigentes, mas dependem de uma seleção adequada dos pontos de partida (clusters seeds). Para tomar partido as potencialidades de ambos os métodos, sugere-se a combinação destes dois métodos de forma bietápica. Na primeira fase, aplica-se a abordagem hierárquica (em alguns recursos descrita como análise exploratória) de forma a identificar o número de clusters mais adequado para descrever os dados.
+
+    Tal como as restantes analises multivariadas consideradas neste módulo, a Análise de Cluster tem uma componente exploratória e interpretativa que obriga à ponderação de várias opções.
+
+    Com base na seleção final das variáveis explora-se métodos de agregação hierárquica para estudar algumas soluções. Neste ponto é necessário escolher a medida de semelhança e os processos (ou o algoritmo) de agregação. Tipicamente aplicam-se medidas de distância em vez de medidas de correlação, porque estas respondem melhor às necessidades do tipo de análise de cluster mais frequentes, em que se identifica grupos de sujeitos em função das diferenças nas magnitudes das suas respostas (e não tanto no padrão das suas respostas). Entre as medidas de distância, as distâncias euclidianas são usadas por defeito, mas existem mais opções. É possível elencar algumas recomendações, por regra é boa prática considerar os resultados em função de mais do que uma medida de semelhança.
+
+    Algumas considerações sobre as medidas de semelhança mais usadas (HAIR ET AL, 2014).:
+
+-    Distância euclidiana recomendada para variáveis métricas
+
+-   Distância euclidiana quadrada recomendada para usar com o método de agregação de Ward
+
+-   Distância de Manhattan não recomendada quando as variáveis são muito correlacionadas
+
+-   Distância de Mahalanobis recomendada quando as variáveis são muito correlacionadas entre si ou quando as variáveis apresentam diferentes escalas de resposta
+
+A mesma lógica é usada na seleção dos algoritmos que processa a análise. Para análises comparativas das vantagens e desvantagens do uso de cada método, MAROCO (2007) sugere a consulta de Sharma (1996) ou Reis (2001).
+
+Algumas considerações sobre os algoritmos de agrupamentos hierárquicos mais usados:
+
+-   Métodos por ligação simples e completa grupos são os mais utilizados (GAGEIRO E PESTANA, 2003)
+
+-   Método por ligação simples tende a maximizar a conectividade entre clusters (gerando menos clusters) enquanto que o método de ligação completa tende a minimizar a distância entre clusters (gerando mais clusters), ao passo que os restante métodos tendem a apresentar características intermédias (MAROCO, 2007)
+
+-   Método por ligação simples (ou menor distância ou vizinho mais perto) é um método flexível, mas pode não ser adequado quando os clusters são pouco distintivos (próximos) entre si
+
+-   Método por ligação completa (ou maior distância ou vizinho mais longe) gera soluções mais relativamente mais compacta, considerado o mais adequado em várias aplicações
+
+-    Método por ligação média (ou distância média ou entre os grupos) apresenta-se como a solução de compromisso entre os procedimentos anteriores, tende a gerar cluster com variações interna semelhantes
+
+-   Método centróide, mais usado no âmbito das ciências naturais e físicas, podem gerar resultados difusos
+
+-   Método de Ward relativamente mais sensível a valores extremos, tende a gerar cluster com o mesmo número de observações
+
+Para explorar os dados de forma eficiente nesta etapa, sugere-se o uso das potencialidades gráficas do R gerando painéis em que os resultados de diferentes algoritmos são comparados com a mesma medida de distância.
+
+Depois é importante identificar quantos clusters devem ser retidos para responder à questão de investigação. Não existe um critério objetivo claro para esta tarefa, sendo recomendado apurar considerações empíricas, mas também teóricas (o quê se espera dos dados) e práticas (o que torna os dados mais fáceis de compreender). Em termos empíricos, podemos analisar (a) o dendograma da análise e (b) as diferenças entre grupos, existindo outros critérios.
+
+(a) O dendrograma consiste numa representação gráfica do processo hierárquico de agrupamento das observados. Num dos eixos estão representadas todas as observações da base de dados e num outro o coeficiente de aglomeração (ex: distância) sendo que as linhas representam o momento em que determinado cluster é agregado noutro. Com esta representação visual é possível identificar algumas opções na classificação de grupos enquanto cortes no diagrama, e o nível de consolidação dos grupos (quando mais cedo no processo um cluster é formado mais distintivo é dos restantes). A análise permite também identificar (e idealmente desconsiderar) soluções com clusters muito pequenos e pouco distintos entre si. Para alguns autores, soluções que geram clusters com 1ou 2 observações podem ser consideradas desajustadas, na medida que podem estar a identificar casos extremos do que devem ser eliminadas.
+
+(b) Também deve-se ter em atenção de que forma os grupos identificados diferem entre si face às variáveis introduzidas. As melhores soluções apresentam clusters com perfis de respostas distintos, isto é, os grupos formados devem apresentar diferenças estaticamente significativas entre si. Alguns autores recomendam a eliminação de variáveis não distintivas (e a retoma de todo o processo de análise sem as incluir). Com base nestas informações, devemos comparar 2-3 soluções que os critérios empíricos nos sugerem mais adequadas, para justificar a opção final que escolhemos.
+
+Por fim, os clusters devem ser descritos, interpretados e relacionados com outras varáveis que possam validar a solução. Nesta etapa, a alocação das observações em função dos clusters deve ser usada com métodos não hierárquicos, tomando partido das suas vantagens deste tipo de abordagem. A esse nível o método mais frequentemente usado é o K-Means, e deve-se identificar como pontos de partida (clusters seeds) o valor do centróde de cada cluster calculado com a medida de distância euclidiana.
+
+Segue um exemplo tutorial que ilustra a aplicação da ACM com a AC. Nesta ilustração, são apresentados os comandos necessários para preparar e conduzir a análise, os critérios que suportam a interpretação dos resultados e os aspetos fundamentais a ter em conta no reporte dos resultados.
+
+### Exercício em aula
+
+Para este exemplo, usamos a base de dados **hobbies** disponibilizada com o pacote FactoMineR. Os dados aqui utilizados dizem respeito a um questionário sobre passatempos. A base de dados reune as respostas de 8.403 indivíduos. As primeiras 18 variáveis identificam que atividades são praticadas regularmente e as quatro seguintes identificam o sexo, faixa etária, estado civil e classe profissional. A base de dados tem ainda um variável quantitativa que indica o número de atividades praticadas dentre as 18 opções possíveis.
+
+#### Preparação do ambiente R
+
+No código em abaixo especificamos os comandos para instalar e carregar os pacotes que usamos para a análise. Editamos o nome que atribuímos à base de dados usada neste exemplo ilustrativo (dados.acm) e, para facilitar a interpretação dos gráficos, recodificamos as respostas categorizadas com zeros e uns com as letras "N" e "Y" para informarem sobre a prática (Y) e não prática (N) das atividades, a os níveis de frequência do visionamento de tv (do menos frequente: 0 ao mais frequente: 1 ).
+
+##### Código 1. Preparação do ambiente R
+
+```{r prepup, echo=TRUE, message=FALSE, warning=FALSE}
+
+#Packages
+##install.packages("vctrs")
+##install.packages("rlang")
+##install.packages("FactoMineR", dependencies = TRUE)
+##install.packages("factoextra, dependencies = TRUE)
+##install.packages("lifecycle")
+##install.packages("psych")
+library("rlang")
+library("vctrs")
+library("ggplot2")
+library("lifecycle")
+library("FactoMineR")
+library("factoextra")
+library("psych")
+
+data(hobbies)
+dados.acm <- hobbies
+str(hobbies)
+
+#identificar as categorias 
+for (i in 1:17)
+levels(dados.acm[,i]) <- (c("N", "Y"))
+
+levels(dados.acm$TV)<- (c("TV_0", "TV_1", "TV_2", "TV_3","TV_4"))
+
+```
+
+#### Etapa 1
+
+Na primeira etapa, devemos definir os objetivos da análise e analisar a qualidade dos dados. Para o exercício vamos admitir que o objetivo consiste em identificar diferentes perfis nos usos do tempo livre, explorando as relações entre as variáveis que descrevem a prática de diferentes atividades.
+
+Nesta etapa também apuramos se os dados disponíveis são adequados à análise.
+
+Todas as variáveis ativas devem ser categóricas e idealmente sem dados omissos (se existirem dados omissos será necessário identificar um método para lidar com estes casos). Os comandos em baixo permitem gerar a informação necessária. Deve-se ainda ter em atenção a existência de categorias muito residuais. Num caso real, ter-se-ia de refletir também sobre a representatividade (estatística ou teórica) da amostra dos dados em análise.
+
+Podemos concluir que temos 18 variáveis que descrevem a participação das atividades, um conjunto de de 4 variáveis que descrevem o perfil socio-demográfico, e uma variável quantitativa que identifica o número de atividades praticadas.
+
+Não existem variáveis com categoriais muito residuais. De acordo com os objetivos, vamos considerar como ativas as variáveis relativas às atividades, para perceber se existem perfis ou grupos diferentes que se distinguem em função do tipo de práticas.
+
+##### Código 2. Requisitos para a análise
+
+```{r requisitos, echo=TRUE, message=FALSE, warning=FALSE}
+
+
+summary(dados.acm)
+
+
+```
+
+#### Etapa 2
+
+Na segunda etapa é importante identificar quantas dimensões devem ser retidos para responder à questão de investigação. Para isso temos de correr o modelo e analisar a evolução dos valores próprios e da inertia em função das dimensões geradas pela análise.
+
+Existem várias formas de o fazer. Com os comandos em baixo podemos analisar como evoluem os valores próprios de cada dimensão e da inércia explicada (apresentada em formato de percentagem). Fica evidente a preponderância da primeira dimensão a explicar a variabiliade dos dados (16%). As duas primeiras dimensões permitem capturar 24% da variabilidade total dos dados, sendo que a inclusão de outras dimensões não traz melhorias significativas ao modelo. Este valor não parece muito elevado, mas importa ter em atenção que é um valor relativo ao total: as dimensões mais explicativas em análises com muitas variáveis e categorias dificilmente darão conta de mais do que 30% da variabilidade explicada.
+
+Procede-se então com o estudo das duas primeiras dimensões.
+
+##### Código 3. Estudo da multidimensionalidade
+
+```{r n fatores, echo=TRUE, message=FALSE, warning=FALSE}
+
+#gerar o modelo
+modelo_acm <- MCA(dados.acm, quali.sup = 19:22, quanti.sup = 23, graph = FALSE)   
+# modelo_acm #índice das listas geradas
+
+#evolução valores próprios
+modelo_acm$eig
+barplot(modelo_acm$eig[1:18])
+
+#evolução percentagem explicada
+fviz_screeplot(modelo_acm, addlabels = TRUE, ylim = c(0, 45)) #gráfico mais bonito, mesma informação
+
+```
+
+#### Etapa 3
+
+Depois de identificar quantas dimensões devem ser retidas para analisar os dados, procede-se com a interpretação das dimensões. A esse nível concentramo-nos nas medidas de discriminação de cada variável, que quantificam a variância de cada variável, depois de ter sido operado o processo de quantificação ótima. No output gerado por este comando as medidas de discriminação são calculadas na forma de coeficiente de determinação, identificadas por eta2, este valor informa sobre a variabilidade partilhada entre a variável e a dimensão.
+
+Podemos extrair essa informação de forma tabular e de forma gráfica com os comandos em baixo. Os gráficos gerados por defeito nem sempre são interpretáveis, mas com algumas edições são muito úteis para explorar e reportar os resultados.
+
+##### Código 4. Estudar uma solução com duas dimensões
+
+```{r criterios_a, echo=TRUE, message=FALSE, warning=FALSE}
+
+#gera o modelo, duas dimensões(2), variáveis qualitativas suplementares (colunas 12-22) e uma quantitativa
+modelo_acm2 <- MCA(dados.acm, ncp = 2, 
+                    quali.sup = 19:22, quanti.sup = 23, graph = FALSE)   
+
+
+#modelo_acm2 #output completo
+#comando em baixo extrai os resultados por variável
+modelo_acm2$var$eta2
+
+#mesmos resultados por dimensão com o comando dimdesc
+#dimdesc(modelo_acm2, axes = 1:2, proba = 0.05 #output completo
+
+#comando em baixo selecciona os elementos ($) por dimensão e tipo de variável
+dimdesc(modelo_acm2, axes = 1:2, proba = 0.05)$'Dim 1'$quali
+dimdesc(modelo_acm2, axes = 1:2, proba = 0.05)$'Dim 2'$quali
+
+#opções gráficas para estudar a composição das variáveis
+
+#gráfico não editado é dificil de ler
+plot(modelo_acm2, choix = "var")
+
+
+#com os eixos adaptados (limites) e eliminando as variiáveis passivas ou suplementares (invisible= "quali.sup""quanti.sup") temos melhor noção de cada eixo
+
+plot(modelo_acm2, choix = "var", invisible= c("quali.sup", "quanti.sup"),cex=0.7, xlim=c(0, 0.6), ylim=c(0, 0.6), title ="Análise de Correspondências Múltipla: 
+     Dimensões que estruturam os usos de tempo livre")
+
+```
+
+Com a análise das medidas de discriminação de cada variável nas duas dimensões retidas, fica novamente evidente que a maior parte das variáveis relacionam-se mais com a dimensão 1 do que a dimensão 2.
+
+As variáveis mais relacionadas com a primeira dimensão informam sobre a prática de atividades de consumo cultural como ir a espetáculos, ao cinema ou a exposições. A segunda dimensão é particularmente discriminada pela a prática de jardinagem, mas também de costura e pesca. Numa análise mais detalhada, para cada dimensão poderíamos assumir como critério sinalizar as variáveis com eta2 superior ao valor da inercia de cada dimensão (CARVALHO, 2008).
+
+Na dimensão 1 as variáveis Reading, Listening music, Cinema, Show, Exhibition, Computer, Sport, Walking, Travelling, Playing music apresentam valores acima de 0.169 (o valor da inércia da dimensão 1 de acordo com o gráfico da secção de código 3). As variáveis Walking, Mechanic, Gardening, Knitting, Fishing apresentam valores acima de 0.069 (o valor da inércia da dimensão 2). Note-se que para valores mais baixos os resultados podem ser apresentados com o recurso à anotação científica (o valor de 0.069 é o mesmo que 6.9e-02 ou 69.00e-01).
+
+Em termos temáticos, podemos concluir que os usos dos tempos livres entre os participantes é estruturado por uma dimensão dedicada às atividades culturais e desportivas (dimensão 1) e uma outra dimensão dedicada a atividades recreativas funcionais (dimensão 2). Podemos também concluir que as variáveis Collecting, Volunteering e TV são pouco discriminativas nestas dimensões - este critério pode ser usado como justificação para omitir estas variáveis da análise, para tornar os resultados mais interpretáveis.
+
+#### Etapa 4
+
+Continuamos com a análise com o estudo da disposição das categorias e dos sujeitos no plano definido. Um primeiro exercício interpretativo útil consiste em identificar que categorias mostram quantificações (ou coordenadas) positivas e negativas, entre as variáveis mais relevantes em cada eixo.
+
+Depois podemos perceber que categorias são posicionadas mais próximas entre si para perceber que práticas estão relacionadas entre si e se existem diferentes formas de passar o tempo.
+
+Apesar de útil, a representação gráfica da análise nem sempre é fácil de interpretar, sendo importante atender à informação complementar gerada pela a análise.
+
+Para cada categoria é gerada informação quanto à quantificação óptima (as coordenadas no gráfico, coord), a contribuição para a constituição de cada dimensão (contrib), o grau de associação entre a categoria e as dimensões (cos2), um teste de hipótese (v-teste testa se as quantificações apresentam valores estatisticamente diferentes de zero; valores acima de 1.96 informam para diferenças estatisticamente significativas de zero, num intervalo de confiança de 95%).
+
+Uma vez que as quantificações são ponderadas pela frequência das categorias, categorias muito residuais podem distorcer a compreensão dos mapas. É por esse motivo que analisamos as associações das categorias com os eixos (cos2) e a as suas contribuições para os eixos. Podem existir categorias muito influentes com baixas associações às dimensões, o que pode confundir a interpretação do resultado. Privilegia-se categorias influentes e com contribuições relevantes para a interpretação dos eixos. Neste processo exploratório as análises gráficas relacionadas com os parâmetros gerados pela análise são muito interessantes, porque permitem omitir categorias menos relevantes para facilitar a interpretação.
+
+Os comandos seguintes permitem aceder à informação pertinente e identificar no gráfico as variáveis mais influentes (contrib) e mais associadas aos eixos (cos2).
+
+##### Código 5. Analisar o posicionamento das categorias
+
+```{r criterios_b, out.width="100%", echo=TRUE, message=FALSE, warning=FALSE}
+#analisar as estimativas geradas no output da ACM
+#usando o $ podemos selecionar partes dos output
+#nesta secção temos acesso às coordenadas ou quantificações das categorias (ativas e inativas)
+modelo_acm2$var$coord
+
+#nesta secção temos acesso às coordenadas ou quantificações das categorias (ativas e inativas)
+modelo_acm$var$coord
+
+
+#nesta secção temos acesso à contribuição de cada categoria para cada eixo (%)
+modelo_acm2$var$contrib
+
+#gerar gráficos
+#gráfico com as categorias ativas representadas
+plot.MCA(modelo_acm2, invisible=c("ind", "quali.sup", "quanti.sup"))
+
+#gráfico com as 10 categorias ativas mais relacionadas 
+plot.MCA(modelo_acm2, invisible=c("ind", "quali.sup", "quanti.sup"), 
+         selectMod = "cos2 10", title ="Destaque para as 10 categorias mais associadas aos eixos" )
+
+#ou com o fviz
+fviz_mca_var(modelo_acm2, invisible=c("ind", "quali.sup", "quanti.sup"),
+             repel = TRUE, # Avoid text overlapping,
+             select.var = list(cos2 = 10),
+             ggtheme = theme_minimal())
+
+#gráfico com as 10 categorias ativas que mais contribuem para os eixos 
+plot.MCA(modelo_acm2, 
+         invisible=c("ind", "quali.sup", "quanti.sup"), 
+         selectMod = "contrib 10", title ="Destaque para as 10 categorias que mais contribuem para os eixos" )
+
+#??plot.MCA #para mais opções
+
+#ou com o fviz
+#fviz_mca_var(modelo_acm2, invisible=c("ind", "quali.sup", "quanti.sup"),
+#             repel = TRUE, # Avoid text overlapping,
+#             select.var = list(contri = 10),
+#             ggtheme = theme_minimal())
+
+
+#ou com o fviz
+#podemos também colorir as categorias em função da associação ou da contribuição 
+#fviz_mca (modelo_acm2, 
+#             col.var = "cos2", invisible=c("ind", "quali.sup", "quanti.sup"),
+#             gradient.cols = c("light blue", "dark blue"), 
+#             repel = TRUE, # Avoid text overlapping
+#             ggtheme = theme_minimal(), 
+#             title ="Análise de correspondências múltiplas:
+#Categorias mais distintivas em destaque") +
+# theme(legend.position = "none")
+
+
+```
+
+Neste caso, a maior parte das categorias mais associadas são também as que mais contribuem. Para além do mais, são tematicamente congruentes (opondo prática versus a não prática de atividades).
+
+Contata-se que a primeira dimensão opõe a participação (direita) versus a não participação (esquerda) nas atividades culturais e desportivas, e a segunda dimensão a participação (em cima) versus a não participação (em baixo) em atividades recreativas.
+
+Olhando os mapas, parece que a não prática de atividades culturais desportivas ou recreativas estão relacionadas (quem não pratica um tipo de atividade tende também a não praticar outro tipo), ao passo que entre praticantes de atividades, dois perfis de praticas parecem existir - um mais vocacionado para a dimensão recreativa e funcional (jardinagem, costura, pesca, mas também colecionismo, mecânica e cozinha), e um outro perfil mais vocacionado para a fruição cultural e desportiva, com a ida a espetáculos, exposições, toca musica, mas também viagens e voluntariado.
+
+#### Etapa 5
+
+Podemos analisar de que forma estes tipos de ocupação de tempos livres se relacionam com as variáveis inativas, neste caso relacionadas com o perfil socioeconómico.
+
+Uma vez mais, a análise gráfica com o suporte com a análise tabular permite-nos tecer algumas considerações. As associações das variáveis suplementares com as dimensões são bastante baixas. Ainda assim, observa-se que as quantificações das categorias de faixas etárias mais altas situam-se nos quadrantes associados à não prática de atividades enquanto que as mais jovens aos quadrantes associados à pratica de atividades desportivas, culturais ou recreativa. O posicionamento das categorias solteiro (single) e da classe profissional gestor (management) e da faixa etária 25 a 35 anos, sugerem a associação com a prática de atividades de fruição cultural e desportiva.
+
+A projeção das coordenadas dos sujeitos no gráfico, por sua vez, sugere que não existem perfis distintos definidos pelas dimensões retidas, na medida em que os objetos estão dispersos ao longo das dimensões sem criar padrões específicos. Ainda assim, poderíamos explorar melhor esta questão com o recurso de uma análise de clusters, utilizando as quantificações dos objetos como variáveis numa análise de clusters.
+
+##### Código 6. Analisar a relação com variáveis suplementares e com os pontos objeto
+
+```{r criterios_c, echo=TRUE,  out.width="100%", message=FALSE, warning=FALSE}
+
+#projetar as var. suplementares ou inativas no mesmo plano: muito confuso
+# omitir "quali.sup", "quanti.sup# da lista invisible 
+plot.MCA(modelo_acm2, invisible = c("ind"))
+
+#consultar associações
+#nesta secção temos acesso ao grau de associação entre as categorias e as dimensões (cos2: cosine ao quadrado)
+modelo_acm2$quali.sup
+
+
+#projetar os objetos
+plot.MCA(modelo_acm2)
+
+```
+
+#### Etapa 6
+
+O processo de ACM permite quantificar a relação entre as categorias num conjunto de dados. Um dos resultados desta análise é a síntese da informação num número menor de dimensões: neste caso duas. Podemos usar esta operação para perceber se conseguimos identificar perfis de sujeitos com base nessas dimensões usando uma análise de clusters. Esta articulação entre ACM e AC é explicada em detalhe no livro da Helena Carvalho (2008), com o uso do programa SPSS, procuramos replicar a abordagem com o R, neste exemplo.É uma abordagem que permite combinar análises qualitativas e quantitativas. Nas palavras da autora, permite passar da topologia, isto é do mapeameanto dos conteúdos, para a tipologia, o mapeamento de perfis.
+
+Portanto as coordenadas para cada objecto em cada dimensão geradas pela ACM são usadas como os dados da AC. Em baixo temos o código para a preparação da base de dados para esta AC.
+
+##### Código 7. Agregar à base de dados as coordenadas dos sujeitos em cada dimensão
+
+```{r prepupcluster, echo=TRUE,  out.width="100%", message=FALSE, warning=FALSE}
+#aqui todos os resultados por sujeito, gerados pela nossa ACM
+#modelo_acm2$ind
+
+#reter as coordenadas
+object_coordinates <- as.data.frame(modelo_acm2$ind$coord)
+#acrescentar à base de dados
+dados.acm$V1 <- object_coordinates$`Dim 1`
+dados.acm$V2 <- object_coordinates$`Dim 2`
+
+summary(dados.acm$V1)
+summary(dados.acm$V2)
+```
+
+Vamos primeiro fazer uma análise de clusters exploratória e depois uma análise confirmatória, para estudar a existência de diferentes perfis. Aplicando os métodos hierarquicos, vamos explorar os dados para escolher entre as medidas de semelhança e dos algoritmos de agrupamento de casos, isto é, vamos definir como medimos a distância entre observações e que regra aplicamos para a formação de clusters.
+
+Em termos operativos, vamos, em primeiro lugar, criar as matrizes de semelhança com base em duas medidas (Distância Euclidiana e a Distância de Mahalanobis), depois geramos os resultados para as análises de clusters geradas em função de três procedimentos (Método por ligação simples, Método por ligação completa e Método de Ward) e finalmente organizamos os resultados recorrendo à representação gráfica dos resultados.
+
+##### Código 8. Análise de clusters exploratória
+
+```{r cluster exp, echo=TRUE,  out.width="100%", message=FALSE, warning=FALSE}
+
+#packages
+#install.packages  ("cluster")
+#install.packages ("factoextra")
+#install.packages ("pvclust")
+#install.packages ("patchwork")
+#install.packages ("compareGroups")#not working!
+
+library ("cluster")
+library ("factoextra")
+library("pvclust")
+library("patchwork")
+#library ("compareGroups")
+
+# cluster etapa 1 ###
+#distribuição e observações extremas
+boxplot(scale(dados.acm[,24:25]))
+
+#cluster etapa 2: selecionar a distância ####
+
+##matrizes de semelhança (distâncias)
+dist1 <- dist(dados.acm[24:25], method = "euclidean")
+dist2 <- dist(dados.acm[24:25], method = "manhattan")
+
+#formação de clusters: dist1
+hc.out_dist1s <- hclust(dist1, method = "single")
+hc.out_dist1m <- hclust(dist1, method = "complete")
+hc.out_dist1w <- hclust(dist1, method = "ward.D2")
+
+#formação de clusters: dist2
+hc.out_dist2s <- hclust(dist2, method = "single")
+hc.out_dist2m <- hclust(dist2, method = "complete")
+hc.out_dist2w <- hclust(dist2, method = "ward.D2")
+
+par(mfrow=c(2,3))
+plot (hc.out_dist1s, main = "Distância Euclidiana", sub = "", xlab = "")
+plot (hc.out_dist1m, main = "", sub = "", xlab = "")
+plot (hc.out_dist1w, main = "", sub = "", xlab = "")
+
+plot (hc.out_dist2s, main = "Distância Manhattan", sub = "Ligação simples" , xlab = "")
+plot (hc.out_dist2m, main = "", sub = "Ligação completa", xlab = "")
+plot (hc.out_dist2w, main = "", sub = "Ward", xlab = "")
+
+```
+
+Com a análise dos dendogramas podemos concluir que as variações dos resultados dependem mais do método de formação de clusters do que da distância selecionada. O método de ligação simples parece ser o menos adequado para identificar grupos neste conjunto de dados, talvez porque as observações sejam relativamente próximas entre si, dificultando a identificação dos grupos. Os métodos ligação completa e de Ward identificam estruturas semelhantes, sendo que os clusters surgem de forma mais consolidada quando se aplica o método de Ward. Feita esta exploração selecionamos a distância euclidiana e o método de Ward para operacionalizar a análise de clusters.
+
+Feita esta opção temos de decidir quanto à identificação do número de clusters que devemos reter. Nesse sentido teremos em conta alguns critérios empíricos, nomeadamente (a) o dendrograma da análise, (b) as diferenças entre os grupos identificados.
+
+Para a análise de um dendrograma importa lembrar que o gráfico representa o processo de classificação de dados ao longo de todo o processo de aglomeração, portanto, partindo do ponto em que as observações estão num cluster próprio até ao momento que todas as observações estão num cluster comum. Na posição que o dendograma é apresentado aqui (observações no eixo horizontal), podemos imaginar linhas verticais no gráfico em diferentes alturas (o eixo vertical representa as interações ou fases da análise), sendo que o número interseções com as linhas verticais do dendograma refere-se ao número de clusters expressos nessa etapa da análise. Linhas verticais posicionadas mais longe do eixo (fases mais tardias) sugerem divisões dos dados em menos grupos ao passo que linhas posicionadas mais perto do eixo (fases mais iniciais) sugerem soluções com mais grupos.
+
+Observando o dendograma selecionado (destacado novamente nesta seção), podemos observar que as soluções de 2 e de 3 clusters surgem de forma consolidada, no sentido em que se mostram consistentes até fases mais avançadas do processo de aglomeração. A solução de 3 clusters dividem as observações de forma relativamente equilibrada.
+
+##### Código 9. Dendograma
+
+```{r criterios_d, echo=TRUE, message=FALSE, warning=FALSE}
+
+##critério A: dendograma
+
+plot(hc.out_dist1w , hang = -1, main = "Dendograma", sub = "Método de Ward", xlab = "Distância euclidiana")
+
+rect.hclust(hc.out_dist1w, k=3, border = 1:3)
+
+
+```
+
+Outra dimensão a ter em conta diz respeito à capacidade de distinção dos grupos. Para tal podemos vamos tentar perceber de que forma as soluções de 2 e de 3 clusters distinguem os sujeitos observados.
+
+Esta operação pode ser feita de várias formas. Para este exercício, comparamos a solução de três e de dois clusters com o recurso aos gráficos. As tendências identificadas com esta análise exploratória devem ser posteriormente testadas na sua relevância estatística.
+
+Analisando os gráficos atendendo à tendência média das observações em cada cluster, percebemos que a solução de 3 clusters parece discriminar pouco os grupos. No fundo o Cluster 2 na solução A apresenta-se como uma posição intermédia entre o Cluster 1 e Cluster 3. Para o exercício retemos 2 clusters, mas podería ser teoricamente justificável explorar os três.
+
+Poderíamos também explorar a associação entre as variáveis que definem os grupos com as variáveis em estudo, e decidir pela solução que mostram mais associações relevantes com as variáveis.
+
+##### Código 10. Capacidade de distinção
+
+```{r criterios_cd, echo=TRUE, message=FALSE, warning=FALSE}
+
+##critério: comparação
+
+#integrar na base as soluções de clusters
+clustercut3 <- cutree (hc.out_dist1w, k = 3)
+clustercut2 <- cutree (hc.out_dist1w, k = 2)
+
+dados.clusters <- as.data.frame (cbind(dados.acm, clustercut3, clustercut2))
+
+#summary(as.factor(dados.clusters$clustercut3))
+#   1    2    3 
+#1971 2196 4236 
+#summary(as.factor(dados.clusters$clustercut2))
+#   1    2 
+#4167 4236 
+
+
+#cl3
+dadoscl3.1 <- dados.clusters[which(dados.clusters$clustercut3 == "1"), c(24:25) ]
+dadoscl3.2 <- dados.clusters[which(dados.clusters$clustercut3 == "2"), c(24:25) ]
+dadoscl3.3 <- dados.clusters[which(dados.clusters$clustercut3 == "3"), c(24:25) ]
+
+#cl2
+dadoscl2.1 <- dados.clusters[which(dados.clusters$clustercut2 == "1"), c(24:25) ]
+dadoscl2.2 <- dados.clusters[which(dados.clusters$clustercut2 == "2"), c(24:25) ]
+
+par(mfrow=c(2,3))
+boxplot(dadoscl3.1, main = "[A]   Cluster 1")
+boxplot(dadoscl3.2, main = "Cluster 2")
+boxplot(dadoscl3.3, main = "Cluster 3")
+
+boxplot(dadoscl2.1, main = "[B]   Cluster 1")
+boxplot(dadoscl2.2, main = "Cluster 2")
+par(cex.axis=0.5)
+
+#comparar descritivas
+# Criar uma lista para armazenar as tabelas de frequências relativas formatadas
+tabelas_frequencias_relativas_formatadas <- list()
+
+# Loop sobre as variáveis e criar as tabelas de frequências relativas formatadas
+for (variavel in c("Reading", "Listening music", "Cinema", "Show", "Exhibition", 
+                   "Computer", "Sport", "Walking", "Travelling", "Playing music", 
+                   "Collecting", "Volunteering", "Mechanic", "Gardening", "Knitting", 
+                   "Cooking", "Fishing", "TV", "Sex", "Age", "Marital status", 
+                   "Profession", "nb.activitees")) {
+ 
+   # Calcular a tabela de frequências
+  tabela_frequencia <- xtabs(~ clustercut2 + dados.clusters[[variavel]], data = dados.clusters)
+  
+  # Calcular a tabela de frequências relativas
+  tabela_frequencia_relativa <- prop.table(tabela_frequencia, margin = 2)  # Calcula as frequências relativas em relação à segunda variável
+  
+  # Formatar as frequências relativas com uma casa decimal
+  tabela_frequencia_relativa_formatada <- round(tabela_frequencia_relativa, digits = 1)
+  
+  # Adicionar a tabela de frequências relativas formatadas à lista
+  tabelas_frequencias_relativas_formatadas[[variavel]] <- tabela_frequencia_relativa_formatada
+}
+
+# Exibir as tabelas de frequências relativas formatadas
+print(tabelas_frequencias_relativas_formatadas)
+
+```
+
+Optando por uma solução, será importante descrever os perfis. Pela análise das frequências, podemos concluir pela existencia de um perfil o C1, com um perfil de participação muito alta, versus um perfil de participação consistentente baixa, que não parece depender do género, mas varia em função da profissão.
+
+##### Código 11. Descrever os perfis
+
+```{r perfis, echo=TRUE, message=FALSE, warning=FALSE}
+
+#testar associações
+# Lista de variáveis que você deseja testar
+lista_variaveis <- c("Reading", "Listening music", "Cinema", "Show", "Exhibition", 
+                   "Computer", "Sport", "Walking", "Travelling", "Playing music", 
+                   "Collecting", "Volunteering", "Mechanic", "Gardening", "Knitting", 
+                   "Cooking", "Fishing", "TV", "Sex", "Age", "Marital status", 
+                   "Profession", "nb.activitees")
+
+# Loop sobre as variáveis e realizar o teste qui-quadrado para cada uma delas
+for (variavel in lista_variaveis) {
+  # Criar a tabela de contingência entre clt2 e a variável atual
+  tabela_contingencia <- table(dados.clusters$clustercut2, dados.clusters[[variavel]])
+  
+  # Realizar o teste qui-quadrado de independência
+  resultado_teste <- chisq.test(tabela_contingencia)
+  
+  # Exibir o resultado do teste
+  print(paste("Variável:", variavel, "\n"))
+  print(resultado_teste)
+}
+
+
+```
+
+#### Reporte de resultados
+
+Reunindo as evidências podemos organizar o reporte de resultados. Admitindo a solução de 2 dimensões, o reporte dos resultados deve no mínimo incluir os seguintes elementos:
+
+-   nome da análise e os seus objetivos
+-   descrição das variáveis e da amostra
+-   critérios que suportam a escolha do número de dimensões
+-   descrição das dimensões
+-   descrição da relação entre as dimensões e as categorias
+-   descrição da relação entre as dimensões e os objetos.
+
+Em abaixo reproduzimos uma possível solução para a apresentação de resultados do exemplo ilustrado:
+
+*Foi realizada uma análise de correspondências múltiplas com o objetivo de identificar padrões na ocupação de tempos livres numa amostra de 8.403 participantes. O uso de tempos livres é descrito por um conjunto de 18 variáveis que descrevem a participação ou não participação de 17 atividades diferentes e a frequência no consumo de TV (medida em quatro níveis).*
+
+*As variáveis mais relacionadas com a primeira dimensão informam sobre a prática de atividades de consumo cultural como ir a espetáculos, ao cinema ou a exposições. A segunda dimensão é particularmente discriminada pela prática de jardinagem, mas também de costura e pesca. A análise da evolução da inércia explicada em função das dimensões geradas permitiu constatar para a preponderância das duas dimensões na descrição da variabilidade de respostas da amostra, com um claro destaque para a primeira dimensão.*
+
+*A análise das medidas de discriminação de cada variável, destaca a contribuição das variáveis que identificam a ida a espetáculos, ao cinema ou a exposições para a dimensão 1 e as variáveis jardinagem, costura e pesca para a dimensão 2.*
+
+*A primeira dimensão opõe a participação à não participação de atividades desportivas e culturais, ao passo que a segunda dimensão, opõe a a participação à não participação de atividades funcionais (cozinha, pesca, mecânica) e recreativas (costura, jardinagem).*
+
+*Conclui-se que os perfis de ocupação de tempos livres nesta amostra, estrutura-se em função de um eixo cultural-erudito (D1) e de um eixo funcional-recreativo (D2), sendo a primeira dimensão a mais explicativa das diferenças entre participantes. A participação de atividades culturais parece ser mais frequente entre as faixas etárias mais novas e classes socioprofissionais altas, apesar das associações entre as dimensões e as variáveis sociodemográficas serem baixas.*
+
+*A análise dos pontos objetos no plano definido pela análise não sugere a existência de perfis de ocupação de tempos livres muito distintos entre si. Ainda assim, parece que a não participação em atividades culturais, recreativas ou desportivas estão relacionadas entre si, sugerindo pelo menos a existência de perfis de participação versus não participação de atividades na ocupação de tempos livres. Análises complementares sobre estes indicadores poderão esclarecer melhor essas tendências.*
+
+*Nesse sentido, tomou-se os valores atribuidos a cada sujeito nas duas dimensões retidas para averiguar da existência de perfis de sujueitos em função destas dimensões de análise. Para estudar o número de clusters mais adequado aos dados, foram realizados um conjuntos de análises exploratórias com base dos dendogramas gerados pelo método o método de cluster hierárquico usando diferentes distâncias (euclidiana e a de Manhattan) e métodos de agregação (ligação simples, ligação completa, método de ward). Com este exercício foi possível identificar agregações relativamente consistentes entre os métodos usados (com os métodos de ligação completa e de ward).*
+
+*A análise do dendograma identifica a solução de 2 cluster relativamente consolidada. Nesse sentido testou-se a capacidade de distinção de grupos das soluções de agregação.São identificadas associações relevantes com todas as variáveis que caracterizam as práticas culturais e recreativas. Identifica-se um perfil com percentagens altas de participação e um outro perfil com um perfil de participação consistentemente baixa. Os grupos não dependem do género, mas associam-se com a classe ocupacional, associando o perfil participativo a classe ocupacionais mais qualificadas.*
+
+### Exercício em autonomia
+
+Com base em dados que tem acesso, ou na base de dados indicada no código em baixo, adapte o código apresentado neste ficheiro para aplicar a técnica da ACM com a articulação com a análise de AC.
+
+##### Código 12. Área de resolução do exercício
+
+```{r base de dados, echo=TRUE, message=FALSE, warning=FALSE}
+
+#0. Preparar os dados
+# carrega os teus dados!
+
+#ou usa esta base de dados:
+#data(birth) #2The birth data contain information about birth and pregnancy of 775 children 
+#??birth #detalhes aqui
+#não esquecer de recodificar os dados de age para categorias; e agregar as categorias mais residuais das variáveis child e dur
+
+
+#1. Assegurar a adequabilidade dos dados 
+#2. Dimensionalidade e número de dimensões a reter
+#3. Interpretar as dimensões
+#4. Interpretar os padrões
+#5. Relacionar padrões com variáveis suplementares
+#6. Identificar perfis com a AC
+
+
+
+```
+
+### Referências
+
+Carvalho, H. (2008). Análise Multivariada de Dados Qualitativos. Utilização da Análise de
+Correspondências Múltiplas com o SPSS. Lisboa: Edições Sílabo.
+
+Cadoret, M., Lê, S., Pagès, J. (2011). Multidimensional Scaling Versus Multiple Correspondence Analysis When Analyzing Categorization Data. In: Fichet, B., Piccolo, D., Verde, R., Vichi, M. (eds) Classification and Multivariate Analysis for Complex Data Structures. Studies in Classification, Data Analysis, and Knowledge Organization. Springer, Berlin, Heidelberg. <https://doi.org/10.1007/978-3-642-13312-1_31>
+
+Everitt, B. & Horton, T. (2011). An Introduction to Applied Multivariate Analysis with
+R. New York: Springer Science.
+
+Hair, J.F., Black, W.C., Babin, B.J., Anderson, R. E. (2014). Cluster Analysis. In Multivariate Data Analysis. Essex: Pearson Education Limited.
+
+Gageiro, J. N. & Pestana, H. (2008). Análise de dados para ciências sociais: a complementaridade
+do SPSS. Lisboa: Edições Sílabo.
+
+Maroco, J. (2007). Análise Estatística com Utilizacao do SPSS. Lisboa: Edições Sílabo.

@@ -1,0 +1,32 @@
+====================================================================
+LOG START: 01_cleaning.R
+Execution Time: 2026-02-02 13:02:58.238435 
+====================================================================
+
+>> Action: Loading raw CSV from data/raw/ESS/ess_integrated_rounds1_11.csv ...
+[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=---------------------------------------------------------------------] [32m2.15GB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [==================================----------------------------------] [32m358.16MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=====================================-------------------------------] [32m360.36MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=====================================-------------------------------] [32m349.30MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=======================================-----------------------------] [32m342.83MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=========================================---------------------------] [32m333.90MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [===========================================-------------------------] [32m336.56MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [==============================================----------------------] [32m340.19MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [================================================--------------------] [32m336.52MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=================================================-------------------] [32m332.11MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [==================================================------------------] [32m324.29MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [====================================================----------------] [32m327.38MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=====================================================---------------] [32m319.98MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [======================================================--------------] [32m312.13MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=======================================================-------------] [32m289.56MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=========================================================-----------] [32m288.06MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [===========================================================---------] [32m290.28MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [==============================================================------] [32m293.09MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [=================================================================---] [32m302.13MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [===================================================================-] [32m300.60MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [===================================================================-] [32m294.83MB/s[0m, eta: [36m 0s[0m[1mindexing[0m [34mess_integrated_rounds1_11.csv[0m [====================================================================] [32m296.16MB/s[0m, eta: [36m 0s[0m                                                                                                                                                                        Raw Dataset Loaded. Total Observations: 68908 
+>> Action: Filtering for Target Countries (PT, ES, GR, IT) and Age >= 18...
+   Rows remaining: 67358 
+   Rows dropped: 1550 
+
+>> Action: Cleaning Employment Variables for 'digclass'...
+
+>> Safety Check: Missing Values in Key Class Indicators
+   Missing ISCO-08 (R5-11): 6593 
+   Missing ISCO-88 (R1-4):  0 
+   Missing Employment Status: 0 
+   Missing Supervisor Status: 11180 
+
+>> Safety Check: Valid Observations by Country and Round
+    
+        1    2    3    4    5    6    7    8    9   10   11
+  ES 1670 1608 1814 2486 1840 1841 1880 1918 1613 2231 1802
+  GR 2511 2363    0 2019 2649    0    0    0    0 2788 2735
+  IT 1193    0    0    0    0  935    0 2524 2685 2599 2815
+  PT 1444 2008 2180 2296 2104 2117 1227 1249 1034 1813 1367
+
+>> Action: Saving to data/temp/01_filtered_data.rds ...
+
+====================================================================
+LOG END: Script 01 Completed.
+====================================================================

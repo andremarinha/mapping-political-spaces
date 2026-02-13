@@ -1,0 +1,11 @@
+LOG START: 04_final_merge.R [Updated Selection]
+Time: 2026-02-04 15:43:23.653369 
+
+Loaded N: 67358 
+
+>> Action: Aggregating Oesch 16 -> Oesch 5...
+>> Action: Applying Labels to Class Schemes...
+>> Action: Selecting final variables...
+
+>> Final Dimensions: 67358 x 27 
+Saved to data/master/ess_final.rds 

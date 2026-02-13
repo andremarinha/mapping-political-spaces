@@ -1,0 +1,10 @@
+LOG START: 02_weighting.R [Legacy-Aligned]
+Time: 2026-02-02 13:29:21.803304 
+
+Rows loaded: 67358 
+>> Action: Harmonizing Income...
+   Income missingness: 0.03123608 
+>> Action: Constructing/Repairing 'anweight'...
+   Weights constructed. Mean: 1446.342 
+
+Saved to data/temp/02_weighted_data.rds 

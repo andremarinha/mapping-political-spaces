@@ -1,0 +1,305 @@
+---
+title: "Análise Multivariada"
+subtitle: "Análise de Componentes Principais e Análise Factorial Exploratória"
+author: "Daniela Craveiro"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+### Introdução
+
+Juntamos neste módulo as descrições da Análise Fatorial exploratória (AFE) e Análise de Componentes Principais (ACP) porque ambas as técnicas são aplicadas com propósitos semelhantes. Opta-se por estas técnicas quando se assume que um conjunto de variáveis quantitativas pode ser escrito por um conjunto menor de variáveis (fatores ou componentes). Este resumo "estatístico" parte do pressuposto que as variáveis medem o mesmo constructo latente ou que, pelo menos as variáveis se sobrepõem de algum modo, isto é, as variáveis estão correlacionadas, partilham variabilidade.
+
+Existe alguma confusão terminológica entre manuais de estatística e de análise de dados a este nível. Em alguns manuais, a AFE e a ACP são até apresentadas como diferentes tipos de análise fatorial exploratória, assentes em diferentes métodos de estimação (e.g. HAIR ET AL, 2014), e são vários os autores que optam por apresentar a AFE e a ACP de forma conjunta, como fazemos aqui. As duas técnicas diferem principalmente na forma como lidam com a variância das variáveis incluídas na análise. Quando as variáveis estão correlacionadas, admite-se que a variância total de uma variável tem uma parte comum (common variance) e uma parte específica (unique variance ou error variance), face ao conjunto. Numa AFE procura-se estimar a variabilidade comum da matriz de correlações para se identificar os fatores que consigam explicar o máximo dessa variabilidade partilhada no conjunto das varáveis da análise. Em contrapartida, numa ACP o foco está na variabilidade total (portanto, incluindo a parte que é comum e a parte que é específica). Procura-se explicar o máximo da variância total da matriz de correlações, através de um conjunto menor de componentes lineares. Assim, pode-se dizer que AFE dá conta da covariância do conjunto dos dados, enquanto que a PCA dá conta da variância total do conjunto dos dados em análise. São, pois, duas abordagens diferentes. Com a AFE desenvolve-se um modelo matemático para identificar os fatores que representam a correlação entre as variáveis. Admite-se que existem variáveis latentes (ou fatores), que não observamos diretamente, que explicam a variância dos dados e que podem ser estimados através das comunalidades de cada variável (proporção de variância comum de uma variável). Historicamente, AFE foi técnica desenvolvida para responder às necessidades dos estudos de qualidade psicométrica de escalas e instrumentos de medida usadas em disciplinas como a Psicologia, em que se procura medir o constructo complexo e controlar os erros das medidas individuais. Com a PCA, em contrapartida, a abordagem é mais simples. Os dados originais são decompostos (ou resumidos) num conjunto de componentes lineares, e é estimado o papel de cada variável para essas componentes. Visualmente a AFE pode ser representada num diagrama em que os fatores (variáveis latentes) geram as variáveis observadas, enquanto que a PCA é representada de forma a que as variáveis observadas geram as componentes. Matematicamente, as equações que descrevem a relação entre fatores (AF) ou componentes (APC) e as variáveis que as compõe também permitem identificar facilmente as diferenças entre as variáveis (ver KIM, 2018).
+
+A AFE e ACP são muitas vezes soluções diferentes para o mesmo tipo de problema, especialmente se estamos a lidar com conjunto grandes de variáveis que com variância comum acima de 40% de variância (isto é com mais de 30 variáveis e comunalidades acima de 0.4 -- de acordo com Stevens 2002, cited in FIELD ET AL 2012). Para os restantes casos, é importante analisar o problema em mãos para escolher a técnica adequada aos objetivos e questões da investigação (KIM, 2008).
+
+Uma AFE é mais adequado quando se pretende identificar (ou testar) os constructos latentes que explicam as variáveis observadas, enquanto que uma PCA é a melhor opção quando se pretende obter um resumo empírico dos dados. (TABACHNICK & FIDELL, 2013). Talvez numa formulação mais simples: a AFE deve ser usada se se pretende generalizar os resultados de uma amostra para uma população (método inferencial). Em contrapartida, uma ACP deve ser usada quando se pretende descrever os resultados da amostra (método descritivo)(FIELD ET AL 2012).
+
+### Como se aplica? As etapas de componentes principais (ou de uma análise fatorial exploratória)
+
+Ambas as técnicas são técnicas exploratórias e dependem de uma sequência de decisões interdependentes. Podemos organizar este tipo de análise em 5 grandes etapas.
+
+1.  Em primeiro lugar, é importante definir os objetivos da análise multivariada para optar para a abordagem mais adequada (AFE ou ACP?). Nesta etapa teremos de identificar o conjunto de variáveis que pretende analisar e qual a análise que pretende realizar. As variáveis incluídas devem ser variáveis métricas (ordinais ou de intervalo), sendo que é possível incluir variáveis nominais como variáveis dicotómicas dummy (respostas codificadas com 0 e 1), desde que se escolha o método adequado para a estimação da associação entre as variáveis (ver FLORA ET AL. 2012 para esclarecimentos).
+
+2.  Numa segunda etapa deve-se averiguar se os dados permitem a aplicação da técnica escolhidas. Um dos critérios a ter em conta é o tamanho da amostra, sendo preferível usar este tipo de análise em bases de dados com pelo menos 100 casos, para minimizar os riscos de sobreajustamento aos dados (resultados com pouco generalizáveis). Para Hair (HAIR ET AL, 2014), este tipo de análise não deve ser conduzido quando o número de observações é inferior ao número de variáveis introduzidas da análise, sendo que no mínimo deve existir 50 casos e 5 casos por cada variável introduzida na análise. Outro aspeto a analisar diz respeito ao tipo de relações existentes entre as variáveis introduzidas na análise. Estas técnicas multivariadas assentam na matriz de correlações entre as variáveis. É, portanto, necessário averiguar se que as correlações são adequadas para descrever os dados, isto é se o conjunto das variáveis se correlacionam o suficiente. A este nível, pode-se correr o teste de esfericidade de Barlett, que testa a presença de pelo menos uma correlação significativa em toda matriz de correlações. Pode-se também usar o indicador o teste de adequação da amostra (Kaiser-Meyer-Olkin), que quantifica o grau de intercorrelação entre as variáveis. O valor varia de 0 a 1, sendo considerado bom quando superior a 0.8, médio entre 0.7 e 0.8, medíocre 0.6 a 0.7, baixo quando inferior a 0.6. Admite-se que a análise não é adequada quando o KMO é inferior a 0.5 (HAIR ET AL, 2014).
+
+3.  Numa terceira etapa é necessário escolher o método de extração e o número de fatores ou componentes. Existem vários procedimentos disponíveis em R. Estes métodos geram diferentes soluções, ora maximizando a variância ora minimizando as correlações residuais, mas tendem a chegar a conclusões semelhantes em análise multivariadas com bases de dados grandes, muitas variáveis, e estimativas de comunalidades semelhantes (TABACHNICK & FIDELL, 2013, P.638). Para uma AFE o método mais usado é o de Máxima Verossimilhança e para a ACP o método de Análise de Componentes Principais. Estes métodos geram soluções adequadas para o tipo de análises realizadas com estas técnicas, sendo que para objetivos mais específicos, deve-se explorar alternativas (para uma revisão geral dos métodos disponíveis nos pacotes estatísticos mais amplamente usados: TABACHNICK & FIDELL, 2013). Com a escolha do método de extração é necessário identificar o número de fatores ou componentes a reter. Existem vários critérios que podem ser usados na escolha do número de fatores ( TABACHNICK & FIDELL, 2013 recomendam Gorsuch (1983) e Zwuick and Velicer (1986) para uma descrição aprofundada desses critérios).
+
+    Aqui, abordamos três: o método de Kaiser, o método de Cattell, e o método da análise paralela. Para poder aplicar estes critérios, é necessário gerar uma primeira análise, em que retém o máximo de fatores ou componentes, que corresponde ao numero das variáveis incluídas na análise. Em particular dá-se atenção aos valores próprios dos fatores (SS Loadings no output R) para aplicar estes critérios. Aconselha-se a ter em conta vários critérios e comparar as diferentes soluções sugeridas:
+
+-   A. De acordo com o método de Kaiser, retém-se todos os fatores com valores próprios acima de 1, sendo atualmente utilizado o ponte de corte de 0,7 (de acordo com a formulação de JOLLIFE, 1973).
+
+-   B. O método de Catell propõe uma análise gráfica, em que se representa os valores próprios (eixo y) em função do numero do fator a que correspondem (eixo x). Este gráfico é conhecido como o Scree plot ou o gráfico gravilha, por se assemelhar a um monte de gravilha que se espalha (FIELD ET AL 2012). Neste caso o número de fatores a reter corresponde ao ponto anterior ao ponto de inflexão do gráfico.
+
+-   C. A análise paralela, proposta por Horn (1965, citted in TABACHNICK & FIDELL, 2013), tem na base a replicação da análise inicial num conjunto de bases de dados com o mesmo número de variáveis e casos selecionados aleatoriamente. Os resultados finais gerados são comparados com os valores reais. O ponto em que os valores próprios calculados com os dados reais passam a ser inferiores aos calculados com os dados gerados aleatoriamente é tomado como critério para o número de fatores a reter. Os critérios podem sugerir a retenção de diferentes números de fatores. Deve-se explorar as diferentes soluções e optar pela que é mais parcimoniosa (menor número de fatores ou componentes) ou a mais interpretável.
+
+4.  Por fim, é necessário interpretar os fatores identificados. Para este exercício observa-se a contribuição de cada variável para o fator, identificando as variáveis chave de cada fator. Existe um procedimento estatístico que facilita este processo: a rotação de fatores. Este processo tenta maximizar correlações altas e minimizar correlações baixas, para clarificar a que variáveis mais se associa cada fator. Existem dois tipos de rotação: rotação ortogonal e rotação oblíqua. A primeira assume que os fatores não estão correlacionados e a segunda assume que os fatores estão correlacionados. A escolha entre um e o outro método de rotação depende se existe motivos teóricos para assumir correlação ou ausência de correlação entre fatores. Na ausência dessa premissa teórica, deve-se optar um por rotação obliqua, uma vez que os resultados serão determinados pela correlação entre fatores e por esse motivo na ausência de correlação, serão equiparados à solução ortogonal (HAIR ET AL, 2014). O R oferece vários métodos de rotação ortogonal (varimax, quartimax, BentlerT and geominT) e oblíqua (blimin, promax, simplax, BentlerQ and geominQ), que definem como os fatores são rodados. Field e colaboradores (FIELD ET AL 2012) recomendam o uso do método varimax quando se opta por uma rotação ortogonal e o método direct oblimin quando se opta por uma rotação oblíqua. É importante sublinhar que a rotação de fatores não aumenta adequabilidade do modelo aos dados: todas as soluções geradas são matematicamente semelhantes antes e depois da rotação. A escolha do método de ser a que gera a solução mais fácil de interpretar, isto é, a solução em que é mais fácil de identificar que variáveis compõem cada fator.
+
+    Depois da rotação a compreensão dos fatores será facilitada. Tanto na AFE como ACP o processo de interpretação passa por identificar que variáveis compõem os fatores e que temas gerais surgem desse conjunto de variáveis. Este processo é suportado pela consulta da matriz de pesos fatoriais, isto é a tabela que sistemática os pesos fatoriais de cada variável em cada fator (Standardized loadings based upon correlation matrix ). O primeiro critério remete para a relevância (significância prática e não estatística) de cada peso. Para uma variável ser considerada relevante para a interpretação de um fator tem se apresentar no mínimo um peso fatorial superior a .30; sendo considerados valores acima .50 como relevantes e valores superiores a .70 como indicativos de uma estrutura bem definida (HAIR ET AL, 2014). Também se pode estimar a significância estatística de cada peso fatorial, atendendo ao tamanho da amostra. Stevens (Stevens 2002, cited in FIELD ET AL 2012) calcula que significância estatística é assegurada para pesos fatoriais acima de 0.722, 0.512, 0.364, 0.299 como estatisticamente significativos para amostras de cerca de 50, 100, 200 e 300 casos. Depois de reconhecer que variáveis compõem os fator e quais as variáveis chave (as que apresentar pesos mais elevados), deve-se identificar o tema ou aspeto comum do conjunto. Tipicamente atribui-se o nome aos fatores que facilita a compreensão da estrutura dos dados, reportando assim a estrutura de fatores ou de componentes.
+
+5.  Por fim, importa avaliar a qualidade da solução apresentada e redefinir o modelo se necessário. Idealmente uma AFE ou ACP chegariam a uma solução com uma estrutura bem definida, com as variáveis a demostrar pesos fatoriais altos em apenas um fator e bem representadas pelo modelo. O processo de análise pode identificar alguns aspetos que dificultam a interpretação da análise: variáveis sem pesos fatoriais relevantes ou significativos, que saturam em mais do que um fator, ou com comunalidades muito baixas (h2 no output, indicam a porção de variância comum explicada pela solução retida; habitualmente considera-se que as comunalidades devem ser 0.5 ou superiores). De acordo com HAIR ET AL, 2014, p.117-117, face a estas questões pode-se optar pelas seguintes opções: por reportar e ignorar estas questões; considerar a eliminação de variáveis problemáticas; testar métodos de rotação alternativos: testar soluções com número alterativo de fatores; testar diferentes técnicas de estimação (AFE, ACP). Esta componente interativa e exploratória é característica na aplicação da AFE e da ACP e deve suportar o objetivo de encontrar uma solução que seja empírica e teoricamente adequada (HAIR ET AL, 2014). Estas caraterísticas fazem com que estas técnicas sejam olhadas com desconfiança por alguns académicos porque dependem em grande medida da capacidade interpretativa do analista e existem poucos critérios externos que permitam avaliar a qualidade da análise (TABACHNICK & FIDELL, 201; HAIR ET AL, 2014). É necessário assim, manter uma postura rigorosa e transparente quanto às decisões que vão sendo tomadas na aplicação e interpretação destas abordagens.
+
+São estas 5 etapas que permitem aplicar uma AFE ou PCA ao conjunto de variáveis selecionadas para descrever ou identificar a sua estrutura interna. Na próxima seção, apresentamos um exemplo tutorial que ilustra a aplicação destas técnicas, em função das 5 etapas definidas. Nesta ilustração, são apresentados os comandos necessários para preparar e conduzir a análise, os critérios que suportam a interpretação dos resultados e os aspetos fundamentais a ter em conta no reporte dos resultados.
+
+### Exercício em aula
+
+Para este exemplo, usamos uma base de dados **Thurstone** disponibilizada pelo R em formato de matriz de correlações no pacote psych. Esta base de dados sistematiza a correlação entre os resultados de 9 testes psicológicos aplicados a 213 estudantes. Como a matriz de correlações é o primeiro passo para a AFE e a ACP, para correr uma análise deste tipo, tanto podemos usar dados em bruto (neste caso seriam os resultados dos alunos em cada teste) como a matriz de correlação entre as variáveis.
+
+#### Preparação do ambiente R
+
+No código em abaixo especificamos os comandos para instalar e carregar os pacotes que usamos para a análise. Atribuimos o nome (dados_cor) e editamos os nomes da variáveis para facilitar a compreensão dos dados.
+
+#### Matrix de Correlações
+```{r prepup, echo=TRUE, message=FALSE, warning=FALSE}
+??cor.
+````
+
+##### Código 1. Preparação do ambiente R
+
+```{r prepup, echo=TRUE, message=FALSE, warning=FALSE}
+#install.packages("datasets")
+#install.packages("psych")
+#install.packages("GPArotation")
+#install.packages("corpcor")
+
+library ("datasets")
+library("psych")
+library("GPArotation")
+library("corpcor")
+library("ggplot2")
+
+dados_cor <- Thurstone
+
+#para facilitar a interpretação, traduzimos os nomes das variáveis, mas poderia não ser o caso
+rownames(dados_cor) <- c("Frases", "Vocabulário", "Frases.Completas", "Primeiras.Letras", "Quatro.Letras", "Sufixos", "Series.Letras", "Conjuntos", "Grupos.Letras")
+colnames(dados_cor) <- c("Frases", "Vocabulário", "Frases.Completas", "Primeiras.Letras", "Quatro.Letras", "Sufixos", "Series.Letras", "Conjuntos", "Grupos.Letras")
+
+```
+
+#### Etapa 1
+
+Na primeira etapa, devemos definir os objetivos da análise e optar pela abordagem mais adequada.
+
+Admitindo que a base de dados reúne informação recolhida por testes cognitivos, vamos definir como objetivo a identificação de aptidões cognitivas que possam ser apreendidas pela performance destes testes. Não sendo possível observar diretamente a aptidão cognitiva, inferimos esse construto latente (ou os seus fatores) através da prestação nos vários testes cognitivos. Neste caso, a AFE é a técnica mais adequada. Os comandos correspondentes para a ACP são apresentados (mas desligados) e mantemos as notas necessárias para interpretar os resultados das AFE e ACP.
+
+#### Etapa 2
+
+Na segunda etapa, averiguamos a adequabilidade técnica aos nossos dados. Asseguramos que temos casos suficientes para correr uma análise deste tipo, uma vez que evolve 9 variáveis métricas retiradas numa amostra de 213 casos, o que resulta num rácio casos/variáveis superior a 5.
+
+Os pressupostos de normalidade, linearidade e estudos dos casos extremos devem ser estudados com os procedimentos gráficos e estatísticos habituais, para minimizar enviesamentos e para assegurar uma leitura justa dos resultados. Para além destes procedimentos mais genéricos, devemos avaliar a fatorabilidade dos dados isto é, averiguar se o nível de intercorrelação do conjunto das variáveis introduzidas na análise é adequado à aplicação da análise, recorrendo ao teste de Bartlett e às medidas de KMO.
+
+##### Código 2. Fatorabilidade dos dados
+
+```{r fatorabilidade, echo=TRUE, message=FALSE, warning=FALSE}
+
+##Teste de Bartlett
+cortest.bartlett(dados_cor, n = 213)
+
+##Medidas KMO 
+KMO(dados_cor)
+
+```
+
+Os resultados do teste de Bartlett (com p\<.05) e das medidas de adequabilidade KMO (valores globais e em cada variável) permitem concluir que a aplicação da AFE é adequada (KMO \> 0.80).
+
+### Etapa 3
+
+Na terceira etapa é necessário identificar o número de fatores ou componentes a reter. Para esta decisão, gera-se os resultados de uma análise com o número máximo de fatores ou componentes a reter.
+
+Aproveitamos esta etapa para identificar os aspetos chave dos resultados gerados: a matriz dos pesos fatoriais (Standardized loadings based upon correlation matrix) de cada variável em cada fator que permite interpretar a estrutura interna dos dados (relação entre as variáveis e os fatores retidos); a coluna das comunalidades, ou a porção da variância comum (h2), (no caso de uma ACP as coluna h2 tem todos os valores fixados em 1 nesta versão, pois assume-se que toda a variância é partilhada na solução com o máximo de fatores); a coluna da variância única (u2) de cada variável, última coluna no extremo direto.
+
+Outro aspeto que devemos ter em conta são os valores próprios de cada fator. Este resultado é apresentado fora da tabela dos pesos fatoriais. Os valores próprios (SS loadings) expressam a variância explicada por cada fator na solução e que podem ser apresentados como proporção da variância total explicada (Proportion Var).
+
+##### Código 3. Gerar a solução com máximo de fatores
+
+```{r n fatores, echo=TRUE, message=FALSE, warning=FALSE}
+
+##análise fatorial com o máximo de factores
+fa(dados_cor, nfactors= ncol(dados_cor), rotate = "none",  fm="ml") #=ncol -> máximo de fatores possível
+
+##análise de componentes principais com o máximo de factores
+#pca(dados_cor, nfactors= ncol(dados_cor), rotate = "none",  fm="ml")
+
+```
+
+O comando anterior gera a informação necessária para aplicar os critérios de (A) Kaiser, (B) Catell, e da (C) Análise paralela para a identificação do número de fatores a reter. Mas as análises gráficas facilitam a conclusão.
+
+##### Código 4. Identificar o número de fatores a reter
+
+```{r criterios, echo=TRUE, message=FALSE, warning=FALSE}
+
+##critério A: valores próprios acima de 1 ou .7
+
+afe_max <- fa(dados_cor, nfactors= ncol(dados_cor), rotate = "none")
+pca_max <- pca(dados_cor, nfactors= ncol(dados_cor), rotate = "none")
+#sum(afe_max$values > 1.0) ##quantos com valores próprios acima de 1
+#sum(afe_max$values > .7) ##quantos com valores próprios acima de 0.7
+
+##critério B: ponto de inflexão no gráfico
+
+plot(afe_max$values, type = "b")#análise factorial
+plot(pca_max$values, type = "b")#análise componentes principais
+
+##critério C: análise paralela
+
+fa.parallel(dados_cor, n.obs = 213, fm="ml", fa="fa") #análise factorial
+#fa.parallel(dados_cor, n.obs = 213, fm="ml", fa="pc") #análise componentes principais
+
+```
+
+O critério A sugere uma solução com 1 ou 2 fatores, mas o critério B e C sugerem que uma solução de 3 fatores é mais adequada. Com base nesta informação, deve-se explorar as soluções de 2 e 3 fatores de forma a averiguar qual delas é mais empiricamente e teoricamente robusta.
+
+### Etapa 4
+
+A quarta etapa é dedicada à análise e interpretação dos fatores. Começamos por analisar a solução de 3 fatores. Para facilitar o processo, aplicamos um comando que edita e ordena os resultados gerados e nos ajuda a interpretar os resultados - nestas versões optámos por pedir os pesos fatoriais ordenados e considerando apenas os com valores acima de 0.3.
+
+##### Código 5. Analisar a solução sem rotação
+
+```{r solucao simples, echo=TRUE, message=FALSE, warning=FALSE}
+
+####análise fatorial com 3 fatores, sem rotação com resultados editados de forma a facilitar interpretação
+print.psych(fa(dados_cor, nfactors= 3, rotate = "none", fm="ml"), cut = 0.3, sort = TRUE) #análise factorial
+
+#print.psych(pca(dados_cor, nfactors= 3, rotate = "none", fm="pca"), cut = 0.3, sort = TRUE)#análise componentes principais
+```
+
+Nesta solução é possível verificar que os valores das comunalidades (h2) variam entre 0.84 e 0.51, sugerindo que pelo menos metade da porção da variância de cada variável é variância partilhada (comum). Em contrapartida, a interpretação dos fatores é difícil, na medida que a maior parte dos itens saturam no primeiro fator e existem variáveis com pesos fatoriais significativos em mais do que um fator.
+
+Para facilitar a interpretação, aplica-se uma rotação aos fatores, optando por uma rotação oblíqua, na medida em que as diferentes aptidões cognitivas que a análise pretende identificar (fatores latentes), devem à partida estar correlacionados na medida em que remetem para testes de aptidões cognitivas linguísticas (*Código 6*).
+
+##### Código 6. Analisar a solução com rotação
+
+```{r solucao rodada, echo=TRUE, message=FALSE, warning=FALSE}
+
+####análise fatorial com 3 fatores, sem rotação com resultados editados de forma a facilitar interpretação
+print.psych(fa(dados_cor, nfactors= 3,   fm="ml", rotate = "oblimin"), cut = 0.3, sort = TRUE)
+
+####análise de componentes principais com 3 fatores, sem rotação com resultados editados de forma a facilitar interpretação
+#print.psych(pca(dados_cor, nfactors= 3, rotate = "oblimin"), cut = 0.3, sort = TRUE)
+
+```
+
+Depois da rotação, a estrutura latente torna-se muito mais evidente. As variáveis "Frases", "Vocabulário", "Frases.Completas" apresentam pesos fatoriais altos e estatisticamente significativos (p\<.05) no primeiro fator. Todos estes testes cognitivos remetem para tarefas de interpretação da linguagem e por isso podemos atribuir o nome "Compreensão Verbal".
+
+As variáveis "Primeiras.Letras", "Quatro.Letras", e "Sufixos" saturam num segundo fator que parece remeter para tarefas de a "Fluência verbal".
+
+Por fim no terceiro fator, a variável "Series.Letras" apresenta o maior peso fatorial sendo que "Grupos.Letras" e "Conjuntos também mostram os pesos fatoriais mais elevados neste fator e podem ser considerados de significativos ( \> 0.36, uma vez que a amostra tem \~200 casos). Estes testes cognitivos avaliam a capacidade de "Raciocínio verbal".
+
+A solução de três fatores permite reter 67% da variabilidade total dos dados (Cumulative Var), com o primeiro fator a explicar quase um terço da variância total. Podemos também observar que os três fatores apresentam entre si correlações medianas, com coeficientes de correlação entre .53 -.59, validando a opção por uma rotação oblíqua.
+
+Para assegurar que a solução identificada de 3 fatores é a mais adequada aos dados, é aconselhável analisar a solução alterativa de 2 fatores, sugerida por alguns critérios estudados.
+
+##### Código 7. Comparar com solução alternativa
+
+```{r solucao alternativa, echo=TRUE, message=FALSE, warning=FALSE}
+
+####análise fatorial com 2 fatores, com  rotação e com resultados editados de forma a facilitar interpretação
+print.psych(fa(dados_cor, nfactors= 2, fm="ml", rotate = "oblimin"), cut = 0.3, sort = TRUE)
+
+```
+
+Como se pode constatar pelos dados gerados, apesar da solução permitir a identificação de uma solução em que cada variável satura em apenas um fator, os pesos fatoriais em cada fator baixam em muitos casos e os valores das comunalidades (h2) das variáveis "Sufixos", "Grupos.Letras", "Series.Letras" aconselhariam à sua eliminação. Constata-se também que a solução a 2 fatores explica uma menor porção da variabilidade total dos dados (58% versus 67%). A solução a 3 fatores parece por estes motivos mais adequada aos dados.
+
+Os resultados parecem sugerir que os resultados da bateria de testes aplicados permitem identificar três tipos de aptidão cognitiva linguística: Compreensão verbal, Fluência verbal, Raciocínio verbal. Estes fatores latentes podem, portanto, serem usados para representar a matriz total dos dados.
+
+Apenas adicionando o subcomando "scores = TRUE" ao comando que gera a AFE permitiria o cálculo de pontuações fatoriais para cada participante, usando o método de regressão por defeito (existindo outros disponíveis). Esta possibilidade só é possível nos caso em que se parte dos dados em bruto e não da matriz de correlações como é o caso. Em baixo fica a especificação dos comandos para gerar estas pontuações e para adicionar à base de dados original (dados).
+
+##### Código 8. Gerar pontuações fatoriais
+
+```{r pontuacoes, echo=TRUE, message=FALSE, warning=FALSE}
+
+#### nomear modelo (af3) e gerar as pontuações 
+#af3 <- fa(dados, nfactors= 3, rotate = "oblimin",  fm="ml", scores = TRUE) 
+
+#### atualizar os dados com as pontuações geradas (uma coluna/variável por fator)
+#dados <- cbind (dados, af3$scores)
+
+
+```
+
+### Reportar os resultados
+
+Admitindo a solução de 3 fatores, o reporte dos resultados deve no mínimo incluir os seguintes elementos:
+
+-   nome da análise e o tamanho da amostra
+
+-   análises sobre a adequabilidade da análise (fatorialidade do dados)
+
+-   critérios que suportaram a escolha do número de fatores
+
+-   estrutura dos dados (de que forma os dados se agrupam)
+
+Em abaixo reproduzimos uma possível solução para a apresentação de resultados do exemplo ilustrado.
+
+*Foi realizada uma análise fatorial exploratória com uma rotação oblimn, sobre a matriz de correlações entre 9 variáveis, gerada com base na aplicação de 9 testes de aptidão cognitiva linguística numa amostra de 213 participantes.*
+
+*A fatorialidade dos dados foi estudada com a medida KMO, que se mostrou no geral (KMO 0.88) e para cada variável (KMO \> 0.80) com valores muito acima dos níveis aceitáveis e com o teste de esfericidade de Bartlett (χ² (36) = 1081.968, p \< 0,001), que indicou que o nível de intercorrelação entre as várias é suficiente para uma análise fatorial.*
+
+*O número de critérios a reter foi estudado com base do estudo da solução com o máximo de fatores, tento em conta o critério de Kaiser atualizado (valores próprios \> 0.7), análise do gráfica da evolução dos valores próprios (ponto de inflexão) e a condução de uma análise paralela. Os critérios sugeriam a retenção de 2 (critério de Kaiser atualisado) a 3 fatores (análise gráfica, análise paralela). Entre as duas soluções, a solução de três fatores verificou-se a mais adequada e a com maior capacidade de reter variabilidade total dos dados.*
+
+*Apresenta-se a matriz dos pesos fatoriais ordenada após rotação, em que é possível verificar a saturação não ambígua das variáveis "Frases", "Vocabulário", "Frases.Completas", no fator 1 (F1), a que chamamos de "Compreensão Verbal"; das variáveis "Primeiras.Letras", "Quatro.Letras", e "Sufixos" no segundo fator (F2), a que chamámos de "Fluência verbal"; e das variáveis "Series.Letras", "Grupos.Letras" e "Conjuntos" no ultimo fator (F3) a que chamámos de "Raciocínio verbal". A solução a três fatores permite explicar 67% da variabilidade total, sendo que mais de metade da variância em cada variável é variância partilhada (Comunalidades \> 0.5).*
+
+#### Tabela Exemplo. Pesos fatoriais na soluação de 3 fatores
+
+```{r tabela pond, echo=TRUE, message=FALSE, warning=FALSE}
+
+#### gerar e nomear a solução a 3 fators
+af <- fa(dados_cor, nfactors= 3, rotate = "oblimin")
+
+#### transformar a matrix de pesos fatoriais ($Structure) numa tabela
+tab <- as.table(af$Structure)
+
+#### adicionar a coluna das comunalidades ($communalities) à tabela
+tab <-cbind (tab, af$communalities)
+
+#### mudar o nome das colunas da tabela
+colnames(tab)<- c("F1", "F2", "F3", "Comunalidades") 
+tab #gerar tabela
+
+```
+
+NOTA: Para facilitar a interpretação é aconhelhável ordenar as variáveis de forma a que todos as variáveis que saturam no mesmo fator fiquem agrupadas e que se diferencie e destaque todos pesos fatoriais relevantes à interpretação (valores \> 0.30) e os pesos fatoriais mais elevados de cada variável.
+
+### Exercício em autonomia
+
+Com base em dados que tem acesso, ou na base de dados indicada no código em baixo, adapte o código apresentado neste ficheiro para aplicar a técnica da Análise de Componentes Principais (ou a Análise Fatorial Exploratória).
+
+##### Código 9. Área de resolução do exercíco
+
+```{r base de dados, echo=TRUE, message=FALSE, warning=FALSE}
+
+#0. Preparar os dados
+# carrega os teus dados!
+
+#ou usa esta base de dados:
+#data(bfi) #25 Personality items representing 5 factors
+#??bfi #detalhes aqui
+
+#apenas variaveis numéricas
+#estandardizar variáveis de escalas diferentes
+
+#1. Assegurar a adequabilidade dos dados 
+#2. Identificar o método e o número de componentes a reter
+#3. Interpretar as componentes: rotação?
+#4. Reportar resultados
+
+
+```
+
+### Referências
+
+Hair, J.F., Black, W.C., Babin, B.J., Anderson, R. E. (2014). Exploratory Factor analysys. In *Multivariate Data Analysis*. Essex: Pearson Education Limited.
+
+Field, A., Miles, J., Field, Z. (2012). Exploratory Factor analysys*.* In *Discovering Statistics Using R.* London: SAGE Publications.
+
+Kim, H. (2008). Common Factor Analysis Versus Principal Component Analysis: Choice for Symptom Cluster Research. *Asian Nursing Research*, 2(1), 17-24.
+
+Tabachnick, B.G & Fidell, L. S. (2013). Principal Components and Factor Analysis. *Using Multivariate Statistics* (6th edition). Boston: Pearson Education.
+
+Flora, D.B., Labrish, C., Chalmers, R.P. (2012). Old and new ideas for data screening and assumption testing for exploratory and confirmatory factor analysis. *Frontiers in Psychology*, 3(55), 1-21.
+
+Jolliffe, I.T. (1973).  Discarding Variables in a Principal Component Analysis. II: Real Data. *Journal of the Royal Statistical Society. Series C
+(Applied Statistics),* Vol. 22(1), 21-31.

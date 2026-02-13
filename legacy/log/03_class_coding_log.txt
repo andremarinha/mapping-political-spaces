@@ -1,0 +1,18 @@
+LOG START: 03_class_coding.R [Full Oesch Logic]
+Time: 2026-02-04 15:39:47.705788 
+
+Loaded N: 67358 
+
+>> Action: cleaning variables (Respondent + Partner)...
+
+>> Action: Applying Oesch Logic (Respondent + Partner Substitution)...
+
+>> Action: Coding ORDC, EGP, and Microclass (Respondent Only)...
+
+>> Final Distributions:
+Oesch 8 (With Substitution):
+
+    1     2     3     4     5 
+ 1538 11347  2450 13883  4811 
+
+Saved to data/temp/03_classed_data.rds 

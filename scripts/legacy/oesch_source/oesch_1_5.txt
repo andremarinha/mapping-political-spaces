@@ -1,0 +1,683 @@
+#############################################################################################################################################
+# OESCH CLASS SCHEMA
+# Create 16-Class schema, 8-Class schema and 5-Class schema
+# Data: ESS round 1 - 2002, ESS round 2 - 2004, ESS round 3 - 2006, ESS round 4 - 2008 - 2006, ESS round 5 - 2010
+# October 2020
+# Amal Tawfik, University of Lausanne & HESAV
+#############################################################################################################################################
+
+#### References:
+#### Oesch, D. (2006a) "Coming to grips with a changing class structure" International Sociology 21 (2): 263-288.
+#### Oesch, D. (2006b) "Redrawing the Class Map. Stratification and Institutions in Britain, Germany, Sweden and Switzerland", Basingstoke: Palgrave Macmillan.
+#### A few minor changes were made with respect to the procedure described in these two sources (decisions taken by Oesch and Tawfik in 2014)
+
+#### 16-Class schema constructed
+ #1 Large employers
+ #2 Self-employed professionals
+ #3 Small business owners with employees
+ #4 Small business owners without employees
+ #5 Technical experts
+ #6 Technicians
+ #7 Skilled manual
+ #8 Low-skilled manual
+ #9 Higher-grade managers and administrators
+ #10 Lower-grade managers and administrators
+ #11 Skilled clerks
+ #12 Unskilled clerks
+ #13 Socio-cultural professionals
+ #14 Socio-cultural semi-professionals
+ #15 Skilled service
+ #16 Low-skilled service
+
+#### 8-Class schema constructed
+ #1 Self-employed professionals and large employers
+ #2 Small business owners
+ #3 Technical (semi-)professionals
+ #4 Production workers
+ #5 (Associate) managers
+ #6 Clerks
+ #7 Socio-cultural (semi-)professionals
+ #8 Service workers
+
+#### 5-Class schema constructed
+ #1 Higher-grade service class
+ #2 Lower-grade service class
+ #3 Small business owners
+ #4 Skilled workers
+ #5 Unskilled workers
+
+#### Variables used to construct Oesch class schema: iscoco, emplrel, emplno, iscocop, emprelp, emplnop, cntry, essround
+
+#### Oesch class schema is not constructed for:
+# France in ESS round 1 (2002) and ESS round 2 (2004)
+# Hungary in ESS round 2 (2004)
+# because variable emplrel is missing for these countries in these surveys
+# see below (after End 1) how to construct the class schema for France and Hungary
+
+########################################################################################
+# Respondent's Oesch class position
+# Recode and create variables used to construct class variable for respondents
+# Variables used to construct class variable for respondents: iscoco, emplrel, emplno
+########################################################################################
+
+#### Install dplyr, questionr, labelled and esssurvey packages: install.packages(c("dplyr", "questionr", "labelled", "esssurvey"))
+#### Import ESS data with the esssurvey package: make  sure  your  email  is  registered  at http://www.europeansocialsurvey.org/ before setting the email in the set_email() function below
+#### Set the round you want to download in the import_rounds() function below
+#### Example for a country and a round: import_country(country = "Switzerland", rounds = 1, format = "spss")
+
+library(dplyr)
+library(questionr)
+library(labelled)
+library(essurvey)
+set_email("my_registered@email.com")
+d <- import_rounds(1, format = "spss")
+
+#### Recode occupation variable (isco88 com 4-digit) for respondents
+
+tail(freq(d$iscoco, total = T))
+
+d$isco_mainjob <- d$iscoco
+d$isco_mainjob[is.na(d$isco_mainjob)] <- -9
+var_label(d$isco_mainjob) <- "Current occupation of respondent - isco88 4-digit"
+
+head(freq(d$isco_mainjob, total = T))
+
+
+#### Recode employment status for respondents
+
+freq(d$emplrel, total = T)
+freq(d$emplno, total = T)
+
+d$emplrel_r <- d$emplrel
+d$emplrel_r[is.na(d$emplrel_r)] <- 9
+d$emplrel_r[d$cntry == "FR" & (d$essround == 1 | d$essround == 2)] <- -9 # Replace this command line with [SYNTAX A] or [SYNTAX C]
+d$emplrel_r[d$cntry == "HU" & d$essround == 2] <- -9 # Replace this command line with [SYNTAX E]
+val_label(d$emplrel_r, 9) <- "Missing"
+freq(d$emplrel_r, total = T)
+
+
+d$emplno_r <- d$emplno
+d$emplno_r[is.na(d$emplno_r)] <- 0
+d$emplno_r[d$emplno_r >= 1 & d$emplno_r <= 9] <- 1
+d$emplno_r[d$emplno_r >= 10 & d$emplno_r <= 66665] <- 2
+val_labels(d$emplno_r) <- c("0 employees" = 0,
+                           "1-9 employees" = 1,
+                           "10+ employees" = 2)
+freq(d$emplno_r, total = T)
+
+
+d$selfem_mainjob <- NA
+d$selfem_mainjob[d$emplrel_r == 1 | d$emplrel_r == 9] <- 1
+d$selfem_mainjob[d$emplrel_r == 2 & d$emplno_r == 0] <- 2
+d$selfem_mainjob[d$emplrel_r == 3] <- 2
+d$selfem_mainjob[d$emplrel_r == 2 & d$emplno_r == 1] <- 3
+d$selfem_mainjob[d$emplrel_r == 2 & d$emplno_r == 2] <- 4
+val_labels(d$selfem_mainjob) <- c("Not self-employed" = 1,
+                                  "Self-empl without employees" = 2,
+                                  "Self-empl with 1-9 employees" = 3,
+                                  "Self-empl with 10 or more" = 4)
+var_label(d$selfem_mainjob) <- "Employment status for respondants"
+freq(d$selfem_mainjob, total = T)
+
+
+#################################################
+# Create Oesch class schema for respondents
+#################################################
+
+d$class16_r <- -9
+
+# Large employers (1)
+
+d$class16_r[d$selfem_mainjob == 4] <- 1
+
+# Self-employed professionals (2)
+
+d$class16_r[(d$selfem_mainjob == 2 | d$selfem_mainjob == 3) & d$isco_mainjob >= 2000 & d$isco_mainjob <= 2229] <- 2
+d$class16_r[(d$selfem_mainjob == 2 | d$selfem_mainjob == 3) & d$isco_mainjob >= 2300 & d$isco_mainjob <= 2470] <- 2
+
+# Small business owners with employees (3)
+
+d$class16_r[d$selfem_mainjob == 3 & d$isco_mainjob >= 1000 & d$isco_mainjob <= 1999] <- 3
+d$class16_r[d$selfem_mainjob == 3 & d$isco_mainjob >= 3000 & d$isco_mainjob <= 9333] <- 3
+d$class16_r[d$selfem_mainjob == 3 & d$isco_mainjob == 2230] <- 3
+
+# Small business owners without employees (4)
+
+d$class16_r[d$selfem_mainjob == 2 & d$isco_mainjob >= 1000 & d$isco_mainjob <= 1999] <- 4
+d$class16_r[d$selfem_mainjob == 2 & d$isco_mainjob >= 3000 & d$isco_mainjob <= 9333] <- 4
+d$class16_r[d$selfem_mainjob == 2 & d$isco_mainjob == 2230] <- 4
+
+# Technical experts (5)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2100 &  d$isco_mainjob <= 2213] <- 5
+
+# Technicians (6)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3100 &  d$isco_mainjob <= 3152] <- 6
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3210 &  d$isco_mainjob <= 3213] <- 6
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 3434] <- 6
+
+# Skilled manual (7)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 6000 &  d$isco_mainjob <= 7442] <- 7
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 8310 &  d$isco_mainjob <= 8312] <- 7
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 8324 &  d$isco_mainjob <= 8330] <- 7
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 8332 &  d$isco_mainjob <= 8340] <- 7
+
+# Low-skilled manual (8)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 8000 &  d$isco_mainjob <= 8300] <- 8
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 8320 &  d$isco_mainjob <= 8321] <- 8
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 8331] <- 8
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 9153 &  d$isco_mainjob <= 9333] <- 8
+
+# Higher-grade managers and administrators (9)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 1000 &  d$isco_mainjob <= 1239] <- 9
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2400 &  d$isco_mainjob <= 2429] <- 9
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 2441] <- 9
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 2470] <- 9
+
+# Lower-grade managers and administrators (10)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 1300 &  d$isco_mainjob <= 1319] <- 10
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3400 &  d$isco_mainjob <= 3433] <- 10
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3440 &  d$isco_mainjob <= 3450] <- 10
+
+# Skilled clerks (11)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 4000 &  d$isco_mainjob <= 4112] <- 11
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 4114 &  d$isco_mainjob <= 4210] <- 11
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 4212 &  d$isco_mainjob <= 4222] <- 11
+
+# Unskilled clerks (12)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 4113] <- 12
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 4211] <- 12
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 4223] <- 12
+
+# Socio-cultural professionals (13)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2220 &  d$isco_mainjob <= 2229] <- 13
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2300 &  d$isco_mainjob <= 2320] <- 13
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2340 &  d$isco_mainjob <= 2359] <- 13
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2430 &  d$isco_mainjob <= 2440] <- 13
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2442 &  d$isco_mainjob <= 2443] <- 13
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 2445] <- 13
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 2451] <- 13
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 2460] <- 13
+
+# Socio-cultural semi-professionals (14)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 2230] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2330 &  d$isco_mainjob <= 2332] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 2444] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2446 &  d$isco_mainjob <= 2450] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 2452 &  d$isco_mainjob <= 2455] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 3200] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3220 &  d$isco_mainjob <= 3224] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 3226] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3229 &  d$isco_mainjob <= 3340] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3460 &  d$isco_mainjob <= 3472] <- 14
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 3480] <- 14
+
+# Skilled service (15)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 3225] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3227 &  d$isco_mainjob <= 3228] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 3473 &  d$isco_mainjob <= 3475] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 5000 &  d$isco_mainjob <= 5113] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 5122] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 5131 &  d$isco_mainjob <= 5132] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 5140 &  d$isco_mainjob <= 5141] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 5143] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 5160 &  d$isco_mainjob <= 5220] <- 15
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 8323] <- 15
+
+# Low-skilled service (16)
+
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 5120 &  d$isco_mainjob <= 5121] <- 16
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 5123 &  d$isco_mainjob <= 5130] <- 16
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 5133 &  d$isco_mainjob <= 5139] <- 16
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 5142] <- 16
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 5149] <- 16
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 5230] <- 16
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob == 8322] <- 16
+d$class16_r[d$selfem_mainjob == 1 & d$isco_mainjob >= 9100 &  d$isco_mainjob <= 9152] <- 16
+
+
+d$class16_r[d$class16_r == -9] <- NA
+val_labels(d$class16_r) <- c("Large employers" = 1,
+                             "Self-employed professionals" = 2,
+                             "Small business owners with employees" = 3,
+                             "Small business owners without employees" = 4,
+                             "Technical experts" = 5,
+                             "Technicians" = 6,
+                             "Skilled manual" = 7,
+                             "Low-skilled manual" = 8,
+                             "Higher-grade managers and administrators" = 9,
+                             "Lower-grade managers and administrators" = 10,
+                             "Skilled clerks" = 11,
+                             "Unskilled clerks" = 12,
+                             "Socio-cultural professionals" = 13,
+                             "Socio-cultural semi-professionals" = 14,
+                             "Skilled service" = 15,
+                             "Low-skilled service" = 16)
+var_label(d$class16_r) <- "Respondent's Oesch class position - 16 classes"
+freq(d$class16_r, total = T)
+
+
+d$class8_r <- NA
+d$class8_r[d$class16_r <= 2] <- 1
+d$class8_r[d$class16_r == 3 | d$class16_r == 4] <- 2
+d$class8_r[d$class16_r == 5 | d$class16_r == 6] <- 3
+d$class8_r[d$class16_r == 7 | d$class16_r == 8] <- 4
+d$class8_r[d$class16_r == 9 | d$class16_r == 10] <- 5
+d$class8_r[d$class16_r == 11 | d$class16_r == 12] <- 6
+d$class8_r[d$class16_r == 13 | d$class16_r == 14] <- 7
+d$class8_r[d$class16_r == 15 | d$class16_r == 16] <- 8
+val_labels(d$class8_r) <- c("Self-employed professionals and large employers" = 1,
+                            "Small business owners" = 2,
+                            "Technical (semi-)professionals" = 3,
+                            "Production workers" = 4,
+                            "(Associate) managers" = 5,
+                            "Clerks" = 6,
+                            "Socio-cultural (semi-)professionals" = 7,
+                            "Service workers" = 8)
+var_label(d$class8_r) <- "Respondent's Oesch class position - 8 classes"
+freq(d$class8_r, total = T)
+
+
+
+d$class5_r <- NA
+d$class5_r[d$class16_r <= 2 | d$class16_r == 5 | d$class16_r == 9 | d$class16_r == 13] <- 1
+d$class5_r[d$class16_r == 6 | d$class16_r == 10 | d$class16_r == 14] <- 2
+d$class5_r[d$class16_r == 3 | d$class16_r == 4] <- 3
+d$class5_r[d$class16_r == 7 | d$class16_r == 11 | d$class16_r == 15] <- 4
+d$class5_r[d$class16_r == 8 | d$class16_r == 12 | d$class16_r == 16] <- 5
+val_labels(d$class5_r) <- c("Higher-grade service class" = 1,
+                            "Lower-grade service class" = 2,
+                            "Small business owners" = 3,
+                            "Skilled workers" = 4,
+                            "Unskilled workers" = 5)
+var_label(d$class5_r) <- "Respondent's Oesch class position - 5 classes"
+freq(d$class5_r, total = T)
+
+
+#######################################################################################
+# Partner's Oesch class position
+# Recode and create variables used to construct class variable for partners
+# Variables used to construct class variable for partners: iscocop, emprelp, emplnop
+#######################################################################################
+
+#### Recode occupation variable (isco88 com 4-digit) for partners
+
+
+tail(freq(d$iscocop, total = T))
+
+d$isco_partner <- d$iscocop
+d$isco_partner[is.na(d$isco_partner)] <- -9
+var_label(d$isco_partner) <- "Current occupation of partner - isco08 4-digit"
+
+head(freq(d$isco_partner, total = T))
+
+#### Recode employment status for partners
+
+freq(d$emprelp, total = T)
+
+d$emplrel_p <- d$emprelp
+d$emplrel_p[is.na(d$emplrel_p)] <- 9
+d$emplrel_p[d$cntry == "FR" & (d$essround == 1 | d$essround == 2)] <- -9 # Replace this command line with [SYNTAX B] or [SYNTAX D]
+d$emplrel_p[d$cntry == "HU" & d$essround == 2] <- -9 # Replace this command line with [SYNTAX F]
+val_label(d$emplrel_p, 9) <- "Missing"
+freq(d$emplrel_p, total = T)
+
+d$emplno_p <- d$emplnop
+d$emplno_p[is.na(d$emplno_p)] <- 0
+d$emplno_p[d$emplno_p >= 1 & d$emplno_p <= 9] <- 1
+d$emplno_p[d$emplno_p >= 10 & d$emplno_p <= 66665] <- 2
+val_labels(d$emplno_p) <- c("0 employees" = 0,
+                            "1-9 employees" = 1,
+                            "10+ employees" = 2)
+freq(d$emplno_p, total = T)
+
+
+
+d$selfem_partner <- NA
+d$selfem_partner[d$emplrel_p == 1 | d$emplrel_p == 9] <- 1
+d$selfem_partner[d$emplrel_p == 2 & d$emplno_p == 0] <- 2
+d$selfem_partner[d$emplrel_p == 3] <- 2
+d$selfem_partner[d$emplrel_p == 2 & d$emplno_p == 1] <- 3
+d$selfem_partner[d$emplrel_p == 2 & d$emplno_p == 2] <- 4
+val_labels(d$selfem_partner) <- c("Not self-employed" = 1,
+                                  "Self-empl without employees" = 2,
+                                  "Self-empl with 1-9 employees" = 3,
+                                  "Self-empl with 10 or more" = 4)
+var_label(d$selfem_partner) <- "Employment status for partners"
+freq(d$selfem_partner, total = T)
+
+############################################
+# Create Oesch class schema for partners
+############################################
+
+d$class16_p <- -9
+
+# Large employers (1)
+
+d$class16_p[d$selfem_partner == 4] <- 1
+
+# Self-employed professionals (2)
+
+d$class16_p[(d$selfem_partner == 2 | d$selfem_partner == 3) & d$isco_partner >= 2000 & d$isco_partner <= 2229] <- 2
+d$class16_p[(d$selfem_partner == 2 | d$selfem_partner == 3) & d$isco_partner >= 2300 & d$isco_partner <= 2470] <- 2
+
+# Small business owners with employees (3)
+
+d$class16_p[d$selfem_partner == 3 & d$isco_partner >= 1000 & d$isco_partner <= 1999] <- 3
+d$class16_p[d$selfem_partner == 3 & d$isco_partner >= 3000 & d$isco_partner <= 9333] <- 3
+d$class16_p[d$selfem_partner == 3 & d$isco_partner == 2230] <- 3
+
+# Small business owners without employees (4)
+
+d$class16_p[d$selfem_partner == 2 & d$isco_partner >= 1000 & d$isco_partner <= 1999] <- 4
+d$class16_p[d$selfem_partner == 2 & d$isco_partner >= 3000 & d$isco_partner <= 9333] <- 4
+d$class16_p[d$selfem_partner == 2 & d$isco_partner == 2230] <- 4
+
+# Technical experts (5)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2100 & d$isco_partner <= 2213] <- 5
+
+# Technicians (6)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3100 & d$isco_partner <= 3152] <- 6
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3210 & d$isco_partner <= 3213] <- 6
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 3434] <- 6
+
+# Skilled manual (7)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 6000 & d$isco_partner <= 7442] <- 7
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 8310 & d$isco_partner <= 8312] <- 7
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 8324 & d$isco_partner <= 8330] <- 7
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 8332 & d$isco_partner <= 8340] <- 7
+
+# Low-skilled manual (8)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 8000 & d$isco_partner <= 8300] <- 8
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 8320 & d$isco_partner <= 8321] <- 8
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 8331] <- 8
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 9153 & d$isco_partner <= 9333] <- 8
+
+# Higher-grade managers and administrators (9)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 1000 & d$isco_partner <= 1239] <- 9
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2400 & d$isco_partner <= 2429] <- 9
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 2441] <- 9
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 2470] <- 9
+
+# Lower-grade managers and administrators (10)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 1300 & d$isco_partner <= 1319] <- 10
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3400 & d$isco_partner <= 3433] <- 10
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3440 & d$isco_partner <= 3450] <- 10
+
+# Skilled clerks (11)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 4000 & d$isco_partner <= 4112] <- 11
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 4114 & d$isco_partner <= 4210] <- 11
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 4212 & d$isco_partner <= 4222] <- 11
+
+# Unskilled clerks (12)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 4113] <- 12
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 4211] <- 12
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 4223] <- 12
+
+# Socio-cultural professionals (13)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2220 & d$isco_partner <= 2229] <- 13
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2300 & d$isco_partner <= 2320] <- 13
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2340 & d$isco_partner <= 2359] <- 13
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2430 & d$isco_partner <= 2440] <- 13
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2442 & d$isco_partner <= 2443] <- 13
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 2445] <- 13
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 2451] <- 13
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 2460] <- 13
+
+# Socio-cultural semi-professionals (14)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 2230] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2330 & d$isco_partner <= 2332] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 2444] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2446 & d$isco_partner <= 2450] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 2452 & d$isco_partner <= 2455] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 3200] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3220 & d$isco_partner <= 3224] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 3226] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3229 & d$isco_partner <= 3340] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3460 & d$isco_partner <= 3472] <- 14
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 3480] <- 14
+
+# Skilled service (15)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 3225] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3227 & d$isco_partner <= 3228] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 3473 & d$isco_partner <= 3475] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 5000 & d$isco_partner <= 5113] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 5122] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 5131 & d$isco_partner <= 5132] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 5140 & d$isco_partner <= 5141] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 5143] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 5160 & d$isco_partner <= 5220] <- 15
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 8323] <- 15
+
+# Low-skilled service (16)
+
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 5120 & d$isco_partner <= 5121] <- 16
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 5123 & d$isco_partner <= 5130] <- 16
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 5133 & d$isco_partner <= 5139] <- 16
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 5142] <- 16
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 5149] <- 16
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 5230] <- 16
+d$class16_p[d$selfem_partner == 1 & d$isco_partner == 8322] <- 16
+d$class16_p[d$selfem_partner == 1 & d$isco_partner >= 9100 & d$isco_partner <= 9152] <- 16
+
+
+d$class16_p[d$class16_p == -9] <- NA
+val_labels(d$class16_p) <- c("Large employers" = 1,
+                             "Self-employed professionals" = 2,
+                             "Small business owners with employees" = 3,
+                             "Small business owners without employees" = 4,
+                             "Technical experts" = 5,
+                             "Technicians" = 6,
+                             "Skilled manual" = 7,
+                             "Low-skilled manual" = 8,
+                             "Higher-grade managers and administrators" = 9,
+                             "Lower-grade managers and administrators" = 10,
+                             "Skilled clerks" = 11,
+                             "Unskilled clerks" = 12,
+                             "Socio-cultural professionals" = 13,
+                             "Socio-cultural semi-professionals" = 14,
+                             "Skilled service" = 15,
+                             "Low-skilled service" = 16)
+var_label(d$class16_p) <- "Partner's Oesch class position - 16 classes"
+freq(d$class16_p, total = T)
+
+
+d$class8_p <- NA
+d$class8_p[d$class16_p <= 2] <- 1
+d$class8_p[d$class16_p == 3 | d$class16_p == 4] <- 2
+d$class8_p[d$class16_p == 5 | d$class16_p == 6] <- 3
+d$class8_p[d$class16_p == 7 | d$class16_p == 8] <- 4
+d$class8_p[d$class16_p == 9 | d$class16_p == 10] <- 5
+d$class8_p[d$class16_p == 11 | d$class16_p == 12] <- 6
+d$class8_p[d$class16_p == 13 | d$class16_p == 14] <- 7
+d$class8_p[d$class16_p == 15 | d$class16_p == 16] <- 8
+val_labels(d$class8_p) <- c("Self-employed professionals and large employers" = 1,
+                            "Small business owners" = 2,
+                            "Technical (semi-)professionals" = 3,
+                            "Production workers" = 4,
+                            "(Associate) managers" = 5,
+                            "Clerks" = 6,
+                            "Socio-cultural (semi-)professionals" = 7,
+                            "Service workers" = 8)
+var_label(d$class8_p) <- "Partner's Oesch class position - 8 classes"
+freq(d$class8_p, total = T)
+
+
+d$class5_p <- NA
+d$class5_p[d$class16_p <= 2 | d$class16_p == 5 | d$class16_p == 9 | d$class16_p == 13] <- 1
+d$class5_p[d$class16_p == 6 | d$class16_p == 10 | d$class16_p == 14] <- 2
+d$class5_p[d$class16_p == 3 | d$class16_p == 4] <- 3
+d$class5_p[d$class16_p == 7 | d$class16_p == 11 | d$class16_p == 15] <- 4
+d$class5_p[d$class16_p == 8 | d$class16_p == 12 | d$class16_p == 16] <- 5
+val_labels(d$class5_p) <- c("Higher-grade service class" = 1,
+                            "Lower-grade service class" = 2,
+                            "Small business owners" = 3,
+                            "Skilled workers" = 4,
+                            "Unskilled workers" = 5)
+var_label(d$class5_p) <- "Partner's Oesch class position - 5 classes"
+freq(d$class5_p, total = T)
+
+
+####################################################################################################
+# Final Oesch class position
+# Merge two class variables (respondents and partners)
+# Assign the partner's Oesch class position when the respondent's Oesch class position is missing:
+####################################################################################################
+
+d$class16 <- ifelse(!is.na(d$class16_r), d$class16_r, d$class16_p)
+
+val_labels(d$class16) <- c("Large employers" = 1,
+                             "Self-employed professionals" = 2,
+                             "Small business owners with employees" = 3,
+                             "Small business owners without employees" = 4,
+                             "Technical experts" = 5,
+                             "Technicians" = 6,
+                             "Skilled manual" = 7,
+                             "Low-skilled manual" = 8,
+                             "Higher-grade managers and administrators" = 9,
+                             "Lower-grade managers and administrators" = 10,
+                             "Skilled clerks" = 11,
+                             "Unskilled clerks" = 12,
+                             "Socio-cultural professionals" = 13,
+                             "Socio-cultural semi-professionals" = 14,
+                             "Skilled service" = 15,
+                             "Low-skilled service" = 16)
+var_label(d$class16) <- "Final Oesch class position - 16 classes"
+freq(d$class16, total = T)
+
+
+d$class8 <- NA
+d$class8[d$class16 <= 2] <- 1
+d$class8[d$class16 == 3 | d$class16 == 4] <- 2
+d$class8[d$class16 == 5 | d$class16 == 6] <- 3
+d$class8[d$class16 == 7 | d$class16 == 8] <- 4
+d$class8[d$class16 == 9 | d$class16 == 10] <- 5
+d$class8[d$class16 == 11 | d$class16 == 12] <- 6
+d$class8[d$class16 == 13 | d$class16 == 14] <- 7
+d$class8[d$class16 == 15 | d$class16 == 16] <- 8
+val_labels(d$class8) <- c("Self-employed professionals and large employers" = 1,
+                            "Small business owners" = 2,
+                            "Technical (semi-)professionals" = 3,
+                            "Production workers" = 4,
+                            "(Associate) managers" = 5,
+                            "Clerks" = 6,
+                            "Socio-cultural (semi-)professionals" = 7,
+                            "Service workers" = 8)
+var_label(d$class8) <- "Final Oesch class position - 8 classes"
+freq(d$class8, total = T)
+
+
+d$class5 <- NA
+d$class5[d$class16 <= 2 | d$class16 == 5 | d$class16 == 9 | d$class16 == 13] <- 1
+d$class5[d$class16 == 6 | d$class16 == 10 | d$class16 == 14] <- 2
+d$class5[d$class16 == 3 | d$class16 == 4] <- 3
+d$class5[d$class16 == 7 | d$class16 == 11 | d$class16 == 15] <- 4
+d$class5[d$class16 == 8 | d$class16 == 12 | d$class16 == 16] <- 5
+val_labels(d$class5) <- c("Higher-grade service class" = 1,
+                            "Lower-grade service class" = 2,
+                            "Small business owners" = 3,
+                            "Skilled workers" = 4,
+                            "Unskilled workers" = 5)
+var_label(d$class5) <- "Final Oesch class position - 5 classes"
+freq(d$class5, total = T)
+
+d <- subset(d, select = -c(isco_mainjob, emplrel_r, emplno_r, selfem_mainjob, isco_partner, selfem_partner))
+
+
+####################################################################################################
+# Convert all labelled variables (haven_labelled class) to factors
+# To convert a specific labelled variable to a factor: d$class16 <- to_factor(d$class16, drop_unused_labels = TRUE)
+# The levels argument allows to specify what should be used as the factor levels, the labels (default), the values or the labels prefixed with values
+# Example with the labels prefixed with values: d$class16 <- to_factor(d$class16, drop_unused_labels = TRUE, levels = "p")
+####################################################################################################
+
+d <-  unlabelled(d, drop_unused_labels = TRUE)
+
+##################################
+# End 1
+##################################
+
+
+#### In order to construct the Oesch class schema for France in ESS round 1 (2002) and ESS round 2 (2004) or/and Hungary in ESS round 2 (2004):
+#### You have to add to your ESS data file the following variables from "Country specific variables":
+# ESS round 1 - 2002: France: emprlfr emprlpfr (http://www.europeansocialsurvey.org/data/country.html?c=france)
+# ESS round 2 - 2004: France: emprlfr emprlpfr / Hungary: emprelhu emprlphu (http://www.europeansocialsurvey.org/data/country.html?c=hungary)
+
+#### You have to replace command lines with the following syntaxes:
+
+#### ESS round 1 - 2002
+
+## SYNTAX A (France - respondent):
+# d$emprlfr[d$emprlfr == 1] <- 2
+# d$emprlfr[d$emprlfr >= 2 & d$emprlfr <= 4] <- 1
+# d$emprlfr[d$emprlfr == 5] <- 3
+# d$emprlfr[d$emprlfr >= 6 & d$emprlfr <= 9] <- 9
+# d$emplrel_r <- ifelse(d$cntry == "FR" & d$essround == 1, d$emprlfr, d$emplrel_r)
+
+
+## SYNTAX B (France - partner):
+# d$emprlpfr[d$emprlpfr == 1] <- 2
+# d$emprlpfr[d$emprlpfr >= 2 & d$emprlpfr <= 4] <- 1
+# d$emprlpfr[d$emprlpfr == 5] <- 3
+# d$emprlpfr[d$emprlpfr >= 6 & d$emprlpfr <= 9] <- 9
+# d$emplrel_p <- ifelse(d$cntry == "FR" & d$essround == 1, d$emprlpfr, d$emplrel_p)
+
+
+#### ESS round 2 - 2004
+
+## SYNTAX C (France - respondent):
+# d$emprlfr[d$emprlfr == 1] <- 2
+# d$emprlfr[d$emprlfr >= 2 & d$emprlfr <= 4] <- 1
+# d$emprlfr[d$emprlfr == 5] <- 3
+# d$emprlfr[d$emprlfr >= 6 & d$emprlfr <= 9] <- 9
+# d$emplrel_r <- ifelse(d$cntry == "FR" & d$essround == 2, d$emprlfr, d$emplrel_r)
+
+
+## SYNTAX D (France - partner):
+# d$emprlpfr[d$emprlpfr == 1] <- 2
+# d$emprlpfr[d$emprlpfr >= 2 & d$emprlpfr <= 4] <- 1
+# d$emprlpfr[d$emprlpfr == 5] <- 3
+# d$emprlpfr[d$emprlpfr >= 6 & d$emprlpfr <= 9] <- 9
+# d$emplrel_p <- ifelse(d$cntry == "FR" & d$essround == 2, d$emprlpfr, d$emplrel_p)
+
+
+## SYNTAX E (Hungary - respondent):
+# d$emprelhu[d$emprelhu == 1 | d$emprelhu == 4] <- 1
+# d$emprelhu[d$emprelhu == 2] <- 2
+# d$emprelhu[d$emprelhu == 3] <- 3
+# d$emprelhu[d$emprelhu >= 6 & d$emprelhu <= 9] <- 9
+# d$emplrel_r <- ifelse(d$cntry == "HU" & d$essround == 2, d$emprelhu, d$emplrel_r)
+
+
+## SYNTAX F (Hungary - partner):
+# d$emprlphu[d$emprlphu == 1 | d$emprlphu == 4] <- 1
+# d$emprlphu[d$emprlphu == 2] <- 2
+# d$emprlphu[d$emprlphu == 3] <- 3
+# d$emprlphu[d$emprlphu >= 6 & d$emprlphu <= 9] <- 9
+# d$emplrel_p <- ifelse(d$cntry == "HU" & d$essround == 2, d$emprlphu, d$emplrel_p)
+
+
+##################################
+# End 2
+##################################

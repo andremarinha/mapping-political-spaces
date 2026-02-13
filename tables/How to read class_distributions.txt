@@ -1,0 +1,31 @@
+Based on the code we wrote in Script 05 (05_descriptives.R) and Script 02 (02_weighting.R), here is exactly what w_n represents:
+w_n = Weighted N (Weighted Count)
+
+It stands for the sum of the analysis weights for all individuals in that specific group.
+
+    n (411): This is the raw number of real people you interviewed in the survey.
+
+    w_n (~1,426,920): This is the weighted "volume" of those people in the population structure.
+
+Why is the number so big (~1.4 million)?
+
+In Script 02, we defined the weight calculation using the legacy logic:
+analysis_weight = pspwght * pweight * 10000
+
+Because we multiplied by a scaling factor of 10,000, the w_n values are large.
+
+    pspwght: Corrects for sampling bias (e.g., if rich people were less likely to answer).
+
+    pweight: Corrects for the country's population size (so Spain counts more than Estonia).
+
+    10000: A scaling constant used in the legacy script to make the numbers easier to read (avoiding tiny decimals).
+
+
+How to use it?
+
+You generally do not report w_n directly in your final paper (unless you are estimating total population counts).
+
+Instead, you use w_n to calculate the share column:
+Share=w_n(Total Country)​w_n(Specific Class)​​
+
+    share (0.0249...): This tells you that 2.5% of the Spanish workforce falls into this class. This is the number you plot and report.

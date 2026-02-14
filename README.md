@@ -11,7 +11,7 @@ This project analyses the structure and social structuring of political conflict
 | Location | Purpose | URL |
 |----------|---------|-----|
 | Google Drive | Working copy (primary) | `G:\My Drive\1_projects\mapping` |
-| GitHub | Version control and replication | `github.com/andremarinha` |
+| GitHub | Version control and replication | `github.com/andremarinha/mapping-political-spaces` |
 
 The GitHub repository is the canonical version-controlled copy. Large data files (ESS CSV, `.rds` intermediates, reference articles) are excluded via `.gitignore` and must be obtained separately (see Section 5 for data source).
 

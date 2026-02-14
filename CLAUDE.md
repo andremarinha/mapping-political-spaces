@@ -9,7 +9,7 @@
 
 ## Repositories
 - **Primary (working):** Google Drive — `G:\My Drive\1_projects\mapping`
-- **Replication (public):** GitHub — `github.com/andremarinha` (repository TBD)
+- **Replication (public):** GitHub — `github.com/andremarinha/mapping-political-spaces`
 - Keep both in sync. GitHub is the canonical version-controlled copy.
 
 ## Iron Rules (Do Not Violate)

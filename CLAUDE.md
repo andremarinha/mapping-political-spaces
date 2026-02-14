@@ -37,7 +37,7 @@
 - **R** (tidyverse ecosystem), RStudio project: `mappingSE.Rproj`
 - Always use **relative paths** from project root
 - DIGCLASS package for class scheme derivation (ORDC, EGP, Microclass)
-- Key R packages for analysis: `FactoMineR`, `factoextra` (MCA/MFA), `cluster` (clustering)
+- Key R packages for analysis: `FactoMineR`, `factoextra` (MCA/MFA), `cluster` (clustering), `multilevLCA` / `poLCA` (LCA)
 
 ## Folder Structure
 ```
@@ -45,7 +45,7 @@ data/raw/ESS/          Read-only source data (ESS integrated CSV) [.gitignored]
 data/temp/             Intermediate pipeline outputs (.rds) [.gitignored]
 data/master/           Single source of truth: ess_final.rds [.gitignored]
 data/archive/          Previous master versions [.gitignored]
-scripts/legacy/v2_archive/R_scripts/   Active pipeline (01–05, sequential)
+scripts/legacy/v2_archive/R_scripts/   Active pipeline (01–06, sequential)
 scripts/legacy/        Quarto refs, Oesch source files, v1 archive
 scripts/archive/       Superseded scripts (never deleted, moved here)
 figures/               PNG (300dpi) + PDF outputs
@@ -60,7 +60,9 @@ presentation/          Future Beamer slides
 ```
 
 ## Data Pipeline
-Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_class_coding.R` → `04_final_merge.R` → `05_descriptives.R`. Master output: `data/master/ess_final.rds`.
+Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_class_coding.R` → `04_final_merge.R` → `05_descriptives.R` → `06_participation.R`. Master output: `data/master/ess_final.rds` (67,358 × 1,688 — ALL original ESS variables + derived class/weight/participation variables).
+
+**Note:** Script 04 was updated (2026-02-14) to retain ALL original ESS columns. Previous version archived at `scripts/archive/04_final_merge_v1.R`.
 
 ## Class Schemes
 | Scheme | Classes | Method | Coverage |
@@ -69,6 +71,18 @@ Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_clas
 | ORDC | 13 + 1 (Unclassifiable) | DIGCLASS (ISCO-88 bridged) | All rounds |
 | EGP | 11 | DIGCLASS | All rounds |
 | Microclass | Variable | DIGCLASS (requires ISCO-08) | Rounds 6–11 only |
+
+## Political Participation Dummies (Script 06)
+| Dummy | Source | Rounds | Recode |
+|-------|--------|--------|--------|
+| `badge_d` | `badge` | 1–11 | 1=Yes→1, 2=No→0, else→NA |
+| `bctprd_d` | `bctprd` | 1–11 | 1=Yes→1, 2=No→0, else→NA |
+| `contplt_d` | `contplt` | 1–11 | 1=Yes→1, 2=No→0, else→NA |
+| `sgnptit_d` | `sgnptit` | 1–11 | 1=Yes→1, 2=No→0, else→NA |
+| `pbldmn_d` | `pbldmn` (R1-9) + `pbldmna` (R10-11) | 1–11 | Harmonised via `coalesce()` |
+| `vote_d` | `vote` | 1–11 | 3="Not eligible"→NA |
+
+**Next step:** Latent Class Analysis (country-specific + regional) using `multilevLCA` or `poLCA` to derive participation profiles from these dummies (following Oser 2022; Jeroense & Spierings 2023).
 
 ## Coding Strategy (Frozen)
 - **Primary analysis**: Disjunctive (categorical/indicator) coding of all attitudinal variables
@@ -122,3 +136,11 @@ All session logs are stored in `log/session_YYYY-MM-DD.md`. Always consult the m
 - Updated `CLAUDE.md` and `README.md` with all governance changes
 - **Project state**: Data engineering complete. Git repo initialized. Analysis Phase 1 not started.
 - **Next**: Begin Phase 1 — attitudinal variable selection and harmonisation
+
+### 2026-02-14 — Master Widening & Participation Recoding
+- Fixed `04_final_merge.R`: removed restrictive `select()` that kept only ~25 vars; master now retains ALL 1,682 original ESS + derived variables. Previous version archived at `scripts/archive/04_final_merge_v1.R`.
+- Created `06_participation.R`: recodes 6 political participation items as dummies (0/1/NA), harmonises `pbldmn`/`pbldmna` across rounds via `coalesce()`, recodes `vote` value 3 ("Not eligible") to NA.
+- Master dimensions: 67,358 × 1,688 (1,682 existing + 6 new dummies).
+- Noted methodological references for future LCA: Oser (2022), Jeroense & Spierings (2023). Packages: `multilevLCA`, `poLCA`.
+- **Project state**: Master dataset complete with all ESS variables + class schemes + participation dummies. LCA for participation profiles not yet started.
+- **Next**: Latent Class Analysis (country-specific + regional) to derive participation profiles from the 6 dummies.

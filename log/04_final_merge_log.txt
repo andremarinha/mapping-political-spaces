@@ -1,0 +1,14 @@
+LOG START: 04_final_merge.R [Updated Selection]
+Time: 2026-02-14 18:19:48.766554 
+
+Loaded N: 67358 
+
+>> Action: Aggregating Oesch 16 -> Oesch 5...
+>> Action: Applying Labels to Class Schemes...
+>> Action: Removing intermediate helper columns (ordc_num, ordc_clean)...
+   Keeping ALL original ESS variables + derived class/weight variables.
+   Total variables in master: 1682 
+>> Archived previous master to: data/archive/ess_final_pre04_20260214_181953.rds 
+
+>> Final Dimensions: 67358 x 1682 
+Saved to data/master/ess_final.rds 

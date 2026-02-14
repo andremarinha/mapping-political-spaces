@@ -1,11 +1,9 @@
 # ==============================================================================
 # Script: 04_final_merge.R
 # Path:   scripts/R_scripts/04_final_merge.R
-# Purpose: Calculate Oesch 5, apply labels, and save Master (ALL variables).
+# Purpose: Calculate Oesch 5, apply labels, finalize variables, and save Master.
 # Input:   data/temp/03_classed_data.rds
 # Output:  data/master/ess_final.rds
-# Archive: Previous version at scripts/archive/04_final_merge_v1.R
-# Note:    v2 keeps ALL original ESS variables (v1 selected only ~25).
 # ==============================================================================
 
 library(tidyverse)
@@ -109,28 +107,48 @@ df_labeled <- df_calc %>%
     ), ordered = TRUE)
   )
 
-# 4. Remove intermediate helper columns (keep everything else)
-cat(">> Action: Removing intermediate helper columns (ordc_num, ordc_clean)...\n")
-cat("   Keeping ALL original ESS variables + derived class/weight variables.\n")
+# 4. Final Variable Selection
+cat(">> Action: Selecting final variables...\n")
 
 df_master <- df_labeled %>%
-  select(-ordc_num, -ordc_clean)
+  select(
+    # ID & Design
+    idno, cntry, essround,
+    
+    # Weights
+    dweight, pspwght, pweight, anweight, analysis_weight,
+    
+    # Demographics
+    gndr, agea,
+    
+    # Education (ES-ISCED)
+    eisced,
+    
+    # Work Context (Cleaned)
+    isco_main = isco88_str, 
+    emplrel_r = selfem_mainjob, 
+    
+    # Class Schemes (Numeric & Labeled)
+    oesch_resp,  # <--- NEW: Keep respondent raw class
+    oesch_part,  # <--- NEW: Keep partner raw class
+    oesch16, 
+    oesch8, oesch8_label,
+    oesch5, oesch5_label,
+    ordc, ordc_label,
+    egp11, egp11_label,
+    microclass,
+    
+    # Income (Harmonized)
+    hinctnt_harmonised, hinctnt_source
+  )
 
-cat("   Total variables in master:", ncol(df_master), "\n")
-
-# 5. Archive current master (if it exists) before overwriting
-if(file.exists(output_path)) {
-  if(!dir.exists("data/archive")) dir.create("data/archive", recursive = TRUE)
-  timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-  archive_path <- file.path("data/archive", paste0("ess_final_pre04_", timestamp, ".rds"))
-  file.copy(output_path, archive_path)
-  cat(">> Archived previous master to:", archive_path, "\n")
-}
-
-# 6. Save
+# 5. Save
 cat("\n>> Final Dimensions:", paste(dim(df_master), collapse=" x "), "\n")
 saveRDS(df_master, output_path)
 cat("Saved to", output_path, "\n")
 
+# 6. Export CSV for quick inspection (Optional)
+write_csv(df_master, "data/master/ess_final_sample.csv")
+
 sink()
-message("Script 04 complete! All original ESS variables preserved.")
+message("Script 04 complete! Oesch Respondent/Partner columns preserved.")

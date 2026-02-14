@@ -104,15 +104,18 @@ European Social Survey (ESS), integrated file covering Rounds 1–11.
 
 ## 6. Data Engineering Pipeline
 
-The dataset is built via **5 sequential R scripts** located in `scripts/legacy/v2_archive/R_scripts/`. They must be executed in order. Each script reads from the previous output and writes to a defined location.
+The dataset is built via **6 sequential R scripts** located in `scripts/legacy/v2_archive/R_scripts/`. They must be executed in order. Each script reads from the previous output and writes to a defined location.
 
 | # | Script | Action | Key Logic | Output |
 |---|--------|--------|-----------|--------|
 | 01 | `01_cleaning.R` | Filter and pre-clean | Filters for PT, ES, GR, IT; age >= 18. Normalises column names to lowercase. Pads ISCO codes to 4 digits. Cleans employment relation (`emplrel`), employee count (`emplno`), supervisor status (`jbspv`). | `data/temp/01_filtered_data.rds` |
 | 02 | `02_weighting.R` | Calculate analysis weights | Computes `analysis_weight = pspwght * pweight * 10000`. See weighting strategy below. | `data/temp/02_weighted_data.rds` |
 | 03 | `03_class_coding.R` | Derive class schemes | Oesch 16/8: manual syntax (Oesch's original ranges). ORDC and EGP: via `DIGCLASS` package (ISCO-88 bridged). Microclass: via `DIGCLASS` (Rounds 6–11 only, requires ISCO-08). | `data/temp/03_classed_data.rds` |
-| 04 | `04_final_merge.R` | Label, aggregate, finalise | Aggregates Oesch 16 → Oesch 5. Applies factor labels to all class schemes. Maps unmapped ORDC codes to "14. Unclassifiable". Selects final variable set. | `data/master/ess_final.rds` |
+| 04 | `04_final_merge.R` | Label, aggregate, finalise | Aggregates Oesch 16 → Oesch 5. Applies factor labels to all class schemes. Maps unmapped ORDC codes to "14. Unclassifiable". **Retains ALL original ESS variables** (v2; previous restrictive version archived at `scripts/archive/04_final_merge_v1.R`). | `data/master/ess_final.rds` |
 | 05 | `05_descriptives.R` | Audit and visualise | Generates coverage heatmaps and class distribution plots. Applies Plasma palette standards. | `figures/*.png`, `figures/*.pdf` |
+| 06 | `06_participation.R` | Recode participation dummies | Recodes 6 political participation items as dummies (0/1). Harmonises `pbldmn`/`pbldmna` across rounds via `coalesce()`. Recodes `vote` 3 ("Not eligible") to NA. | `data/master/ess_final.rds` (updated) |
+
+**Master dataset:** 67,358 rows × 1,688 columns (all original ESS variables + derived class, weight, and participation variables).
 
 ### Weighting Strategy
 
@@ -458,7 +461,7 @@ mapping/
 | ID | Decision | Rationale |
 |----|----------|-----------|
 | D01 | Input data converted to `.rds` immediately | Preserves R data types and avoids repeated CSV parsing |
-| D02 | "Keep All Variables" approach in Script 01 | Prevents accidental data loss; final selection happens in Script 04 |
+| D02 | "Keep All Variables" approach throughout pipeline | Prevents accidental data loss; Script 04 v2 retains all original ESS columns (v1 had a restrictive `select()` — archived at `scripts/archive/04_final_merge_v1.R`) |
 | D03 | ORDC gap: unmapped codes → "14. Unclassifiable" | ~15% of respondents fall outside standard 13 classes. Dropping them would silently bias distributions. Explicit 14th category makes the gap visible and auditable. |
 | D04 | Heatmap palette: lighter (yellow) = higher coverage | Better visual contrast than "darker = higher" |
 
@@ -479,6 +482,10 @@ mapping/
 | D07 | Multi-table (MFA/STATIS) for diachronic comparison | Separately estimated spaces are rotationally indeterminate; multi-table methods provide a shared compromise space enabling legitimate temporal comparison |
 | D08 | Oesch implemented via manual syntax, not automated packages | Ensures exact correspondence with Oesch's published coding rules |
 | D09 | Microclass restricted to Rounds 6–11 | Requires ISCO-08, which is only available from Round 6 onwards |
+| D13 | `vote` value 3 ("Not eligible") recoded to NA | Not a participation choice — excluding maintains validity of participation dummies |
+| D14 | `pbldmn` + `pbldmna` harmonised via `coalesce()` | Same concept split at Round 10; `coalesce()` prefers R1-9 variable, falls back to R10-11 |
+| D15 | Participation profiles via LCA (not arbitrary typology) | Following Oser (2022) and Jeroense & Spierings (2023): data-driven profiles are more defensible than ad hoc combinatorial categories |
+| D16 | Country-specific + regional (pooled) LCA models | Consistent with project's country-specific analytical strategy (D06), with regional model for cross-national comparison |
 
 ---
 

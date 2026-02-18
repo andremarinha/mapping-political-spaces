@@ -1,0 +1,107 @@
+---
+title: "All Quiet on the Southern Front? Mapping the Political Spaces in Twenty-first Century Southern Europe"
+author:
+  - name: "André Marinha"
+    affiliations:
+      - name: "[University]"
+date: today
+format:
+  pdf:
+    number-sections: true
+    toc: false
+    documentclass: article
+    geometry: margin=2.5cm
+    fontsize: 12pt
+    linestretch: 1.5
+abstract: |
+  This paper analyses the structure and social structuring of political
+  conflict over time in Southern Europe --- Portugal, Spain, Greece, and
+  Italy --- using data from the European Social Survey (Rounds 1--11,
+  ~2002--2022). Drawing on the Geometric Data Analysis tradition, the
+  analysis pursues two objectives: identifying how many dimensions
+  structure political conflict at different points in time and how these
+  are composed; and analysing how political spaces are socially structured,
+  focusing on the positioning of Oesch social classes and their proximity
+  to political parties.
+execute:
+  echo: false
+  warning: false
+  message: false
+bibliography: assets/bib.bib
+csl: assets/apsr.csl
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+library(knitr)
+# library(texreg)
+
+theme_set(theme_minimal())
+
+# Load workspace from analysis
+load("saved/analysis.Rdata")
+```
+
+# Introduction
+
+<!-- Political conflict in Southern Europe after the Great Recession -->
+<!-- Gap: longitudinal, multi-country, relational approach -->
+
+# Political Space as Relational Structure
+
+<!-- GDA tradition: Bourdieu, Benzécri, Le Roux & Rouanet -->
+<!-- Oesch class schema: work logic + employment relation axes -->
+
+# Data and Methods
+
+## European Social Survey
+
+<!-- Rounds 1-11, integrated file, 4 countries -->
+<!-- Adult population (18+), 67,358 observations -->
+
+## Multiple Correspondence Analysis and Multiple Factor Analysis
+
+<!-- Country-specific MCA -->
+<!-- MFA/STATIS for diachronic comparison -->
+<!-- Disjunctive coding (primary); numeric coding (robustness) -->
+
+## Social Class Operationalisation
+
+<!-- Oesch 16/8/5, ORDC, EGP -->
+
+## Political Participation Profiles
+
+<!-- Latent Class Analysis (Oser 2022; Jeroense & Spierings 2023) -->
+
+# Dimensionality and Composition of Political Conflict
+
+<!-- How many dimensions? How are they composed? -->
+<!-- Eigenvalues, modified rates, dimension interpretation -->
+
+# Social Structuring: Class Positions and Party Proximities
+
+<!-- How are Oesch classes positioned? -->
+<!-- How close are they to political parties? -->
+<!-- Change over time -->
+
+# Participation Profiles
+
+<!-- LCA results: country-specific + regional -->
+
+# Discussion and Conclusion
+
+<!-- Summary, contribution, limitations -->
+
+# References
+
+::: {#refs}
+:::
+
+# Appendix {.appendix}
+
+## A. Robustness: Numeric Coding Comparison
+
+<!-- Side-by-side comparison of disjunctive vs numeric results -->

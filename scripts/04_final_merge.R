@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script: 04_final_merge.R
-# Path:   scripts/R_scripts/04_final_merge.R
+# Path:   scripts/04_final_merge.R
 # Purpose: Calculate Oesch 5, apply labels, and save Master (ALL variables).
 # Input:   data/temp/03_classed_data.rds
 # Output:  data/master/ess_final.rds

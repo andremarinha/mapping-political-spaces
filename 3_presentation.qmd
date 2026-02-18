@@ -1,0 +1,86 @@
+---
+title: "All Quiet on the Southern Front?"
+subtitle: "Mapping Political Spaces in 21st-century Southern Europe"
+author: "André Marinha"
+date: today
+format:
+  revealjs:
+    embed-resources: true
+    theme: simple
+    slide-level: 3
+    slide-number: true
+    toc: true
+    toc-depth: 2
+    number-sections: true
+execute:
+  echo: false
+  warning: false
+  message: false
+bibliography: assets/bib.bib
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+library(FactoMineR)
+library(factoextra)
+library(knitr)
+
+theme_set(theme_minimal())
+
+# Load workspace from analysis
+load("saved/analysis.Rdata")
+```
+
+# Overview
+
+### Research Question
+
+<!-- How is political conflict structured in Southern Europe (PT, ES, GR, IT)? -->
+<!-- How has this structure changed over two decades (2002-2022)? -->
+<!-- How are social classes positioned in the political space? -->
+
+# Data & Method
+
+### European Social Survey
+
+<!-- Rounds 1-11 (~2002-2022), 4 countries, 67,358 observations -->
+
+### Geometric Data Analysis
+
+<!-- MCA / MFA (multi-table) / STATIS logic -->
+<!-- Country-specific analyses -->
+
+# Dimensionality
+
+### Eigenvalues and Inertia
+
+<!-- Scree plots, modified rates -->
+
+# Class Positions
+
+### Oesch Classes in the Political Space
+
+<!-- Barycentres, supplementary projections -->
+
+# Diachronic Change
+
+### Stability and Movement
+
+<!-- Round-by-round partial representations -->
+
+# Participation Profiles
+
+### Latent Class Analysis
+
+<!-- Country-specific LCA results -->
+
+# Discussion
+
+### Summary of Findings
+
+<!-- Key takeaways -->
+
+# References

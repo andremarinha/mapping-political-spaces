@@ -1,0 +1,78 @@
+---
+title: "Overleaf Export: Figures and Tables"
+author: "André Marinha"
+date: today
+format:
+  pdf:
+    keep-tex: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+library(knitr)
+# library(texreg)
+
+# Load workspace from analysis
+load("saved/analysis.Rdata")
+
+# Ensure export directories exist
+dir.create("exports/figures", recursive = TRUE, showWarnings = FALSE)
+dir.create("exports/tables", recursive = TRUE, showWarnings = FALSE)
+```
+
+# Purpose
+
+This document exports all figures and tables from the analysis workspace
+to the `exports/` directory in formats ready for Overleaf import:
+
+- **Figures:** PNG (300 dpi) + PDF to `exports/figures/`
+- **Tables:** LaTeX code to `exports/tables/`
+
+After rendering, copy the `exports/` folder to your Overleaf project.
+
+# Figures
+
+<!-- Example (uncomment when figures exist in workspace):
+
+```{r}
+#| label: export-fig-mca
+#| eval: false
+
+ggsave("exports/figures/fig-mca-dim12.png", figure_mca_dim12,
+       width = 10, height = 8, dpi = 300, bg = "white")
+ggsave("exports/figures/fig-mca-dim12.pdf", figure_mca_dim12,
+       width = 10, height = 8, device = cairo_pdf)
+```
+-->
+
+# Tables
+
+<!-- Example (uncomment when models exist in workspace):
+
+```{r}
+#| label: export-tbl-1
+#| eval: false
+
+tbl_code <- texreg::texreg(models, caption = NULL, label = NULL)
+writeLines(tbl_code, "exports/tables/table-1.txt")
+```
+-->
+
+# Manifest
+
+```{r}
+#| label: manifest
+
+cat("Exported figures:\n")
+list.files("exports/figures", full.names = TRUE)
+
+cat("\nExported tables:\n")
+list.files("exports/tables", full.names = TRUE)
+```

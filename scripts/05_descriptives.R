@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script: 05_descriptives.R
-# Path:   scripts/R_scripts/05_descriptives.R
+# Path:   scripts/05_descriptives.R
 # Purpose: Generate Coverage Statistics and Class Distributions (Tables & Plots)
 # Input:   data/master/ess_final.rds
 # Output:  tables/class_coverage.csv, tables/class_distributions.csv

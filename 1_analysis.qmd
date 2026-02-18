@@ -1,0 +1,105 @@
+---
+title: "Analysis: Mapping Political Spaces in Southern Europe"
+author: "André Marinha"
+date: today
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    number-sections: true
+execute:
+  echo: true
+  warning: false
+  message: false
+bibliography: assets/bib.bib
+---
+
+# Setup
+
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+library(FactoMineR)
+library(factoextra)
+# library(multilevLCA)  # uncomment when LCA phase begins
+# library(poLCA)
+
+theme_set(theme_minimal())
+
+# Load master dataset (produced by scripts/01-06 pipeline)
+df <- readRDS("data/master/ess_final.rds")
+```
+
+# Data Overview
+
+```{r}
+#| label: data-overview
+
+cat("Master dimensions:", nrow(df), "x", ncol(df), "\n")
+cat("Countries:", paste(unique(df$cntry), collapse = ", "), "\n")
+cat("Rounds:", paste(sort(unique(df$essround)), collapse = ", "), "\n")
+
+# Observations by country and round
+table(df$cntry, df$essround)
+```
+
+# Phase 1: Attitudinal Variable Selection
+
+<!-- TODO: Harmonisation audit, variable retention decisions -->
+<!-- Identify candidate ESS items available across all 11 rounds -->
+<!-- Audit category stability and missingness patterns -->
+
+# Phase 2: MCA / MFA Analysis
+
+<!-- TODO: Per-country MCA, then MFA across rounds -->
+<!-- Country-specific analyses (no forced cross-national equivalence) -->
+
+## Portugal
+
+## Spain
+
+## Greece
+
+## Italy
+
+# Phase 3: Dimensionality
+
+<!-- TODO: Eigenvalues, inertia, scree plots, modified rates -->
+<!-- MCA inertia is NOT explained variance -->
+
+# Phase 4: Dimension Interpretation
+
+<!-- TODO: Discrimination measures, eta-squared, contributions -->
+
+# Phase 5: Category Configurations
+
+<!-- TODO: Contributions, cos2, perceptual maps -->
+
+# Phase 6: Supplementary Projections
+
+<!-- TODO: Oesch classes and parties as barycentres -->
+
+# Phase 7: Participation Profiles (LCA)
+
+<!-- TODO: Latent class analysis of participation dummies -->
+<!-- Country-specific models for PT, ES, GR, IT + regional (pooled) model -->
+<!-- Following Oser (2022), Jeroense & Spierings (2023) -->
+<!-- Packages: multilevLCA, poLCA -->
+
+# Phase 8: Cluster Analysis
+
+<!-- TODO: Hierarchical + K-means on MCA coordinates -->
+<!-- Carvalho (2008) approach -->
+
+# Save Workspace
+
+```{r}
+#| label: save-workspace
+#| echo: false
+
+save.image("saved/analysis.Rdata")
+```

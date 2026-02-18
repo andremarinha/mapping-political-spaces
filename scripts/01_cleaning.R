@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script: 01_cleaning.R
-# Path:   scripts/R_scripts/01_cleaning.R
+# Path:   scripts/01_cleaning.R
 # Purpose: Filter ESS Data (PT, ES, GR, IT | Age 18+) & Pre-clean for 'digclass'
 # Input:  data/raw/ESS/ess_integrated_rounds1_11.csv
 # Output: data/temp/01_filtered_data.rds

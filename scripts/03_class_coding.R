@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script: 03_class_coding.R
-# Path:   scripts/R_scripts/03_class_coding.R
+# Path:   scripts/03_class_coding.R
 # Purpose: Generate Class Schemes (Oesch with Partner Logic + DIGCLASS)
 # Logic:   
 #   1. Clean Data: Handle Respondent AND Partner variables.

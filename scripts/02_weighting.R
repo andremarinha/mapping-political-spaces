@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script: 02_weighting.R
-# Path:   scripts/R_scripts/02_weighting.R
+# Path:   scripts/02_weighting.R
 # Purpose: Inventory, Income Harmonization, and Robust Weight Construction
 # Logic:   Adopts Legacy '02_inventory_and_weights.R' logic
 # Input:   data/temp/01_filtered_data.rds

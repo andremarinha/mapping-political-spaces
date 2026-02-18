@@ -41,28 +41,44 @@
 
 ## Folder Structure
 ```
-data/raw/ESS/          Read-only source data (ESS integrated CSV) [.gitignored]
-data/temp/             Intermediate pipeline outputs (.rds) [.gitignored]
-data/master/           Single source of truth: ess_final.rds [.gitignored]
-data/archive/          Previous master versions [.gitignored]
-scripts/legacy/v2_archive/R_scripts/   Active pipeline (01–06, sequential)
-scripts/legacy/        Quarto refs, Oesch source files, v1 archive
-scripts/archive/       Superseded scripts (never deleted, moved here)
-figures/               PNG (300dpi) + PDF outputs
-tables/                Audit tables and distributions (.csv)
-articles/              Reference literature (PDFs) [.gitignored]
-misc/                  ESS docs, ISCO correspondence tables
-legacy/                Historical documentation and execution logs
-log/                   Session logs (one per working session)
-writing/               Future LaTeX manuscripts
-presentation/          Future Beamer slides
-.gitignore             Git exclusion rules (large data, RStudio internals)
+mapping/
+├── 0_README.md                    Project documentation (renamed from README.md)
+├── 1_analysis.qmd                 Central Quarto analysis document
+├── 2_replication_code.R           Auto-generated replication code (via knitr::purl)
+├── 3_presentation.qmd            Reveal.js presentation slides
+├── 4_paper.qmd                   PhD chapter / journal manuscript
+├── 5_overleaf_prep.qmd           Export figures/tables for Overleaf
+├── CLAUDE.md                     This file (updated every session)
+├── assets/                       Bibliography (bib.bib) + citation style (apsr.csl)
+├── saved/                        Shared workspace (.Rdata/.rds) [.gitignored]
+├── exports/                      Overleaf-ready outputs [.gitignored]
+│   ├── figures/                  PNG (300dpi) + PDF
+│   └── tables/                   LaTeX code
+├── data/                         [all .gitignored]
+│   ├── raw/ESS/                  Read-only source data
+│   ├── temp/                     Intermediate pipeline outputs
+│   ├── master/                   ess_final.rds (single source of truth)
+│   └── archive/                  Previous master versions
+├── scripts/                      Active pipeline (01–06, sequential)
+│   ├── 01_cleaning.R ... 06_participation.R
+│   └── helpers/                  Oesch reference data (.txt)
+├── figures/                      Audit PNG (300dpi) + PDF outputs
+├── tables/                       Audit tables (.csv)
+├── articles/                     Reference literature [.gitignored]
+├── misc/                         ESS docs, ISCO correspondence tables
+├── log/                          Session logs
+└── legacy/                       All historical material
+    ├── scripts_v1/               Deprecated v1 pipeline
+    ├── archive/                  Superseded scripts (04_v1, etc.)
+    ├── reference_qmd/            MCA/PCA tutorial QMDs
+    ├── old_dirs/                 Empty writing/ and presentation/ dirs
+    └── log/                      Historical execution logs
 ```
 
 ## Data Pipeline
 Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_class_coding.R` → `04_final_merge.R` → `05_descriptives.R` → `06_participation.R`. Master output: `data/master/ess_final.rds` (67,358 × 1,688 — ALL original ESS variables + derived class/weight/participation variables).
 
-**Note:** Script 04 was updated (2026-02-14) to retain ALL original ESS columns. Previous version archived at `scripts/archive/04_final_merge_v1.R`.
+**Note:** Script 04 was updated (2026-02-14) to retain ALL original ESS columns. Previous version archived at `legacy/archive/04_final_merge_v1.R`.
 
 ## Class Schemes
 | Scheme | Classes | Method | Coverage |
@@ -103,8 +119,22 @@ Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_clas
 - Outputs: high-res PNG (300dpi) + vector PDF
 - Heatmaps: 2x2 grid layout. Bar charts: condensed bottom legends.
 
+## Workflow Architecture (Humphreys Pattern)
+```
+R scripts (01–06)  →  data/master/ess_final.rds
+                              ↓
+                     1_analysis.qmd  →  saved/analysis.Rdata
+                              ↓
+              ┌───────────────┼───────────────┐
+              ↓               ↓               ↓
+       4_paper.qmd    3_presentation.qmd   5_overleaf_prep.qmd
+                                              ↓
+                                     exports/figures/ + exports/tables/
+```
+All consumer documents (`4_paper`, `3_presentation`, `5_overleaf_prep`) load the shared workspace from `saved/analysis.Rdata`. The replication script `2_replication_code.R` is auto-generated via `knitr::purl("1_analysis.qmd")`.
+
 ## Methodological Reference
-`scripts/legacy/Análise multivariada_A2_ACM_AC.qmd` — MCA + Cluster Analysis tutorial (Daniela Craveiro). Uses `FactoMineR`/`factoextra` with the `hobbies` dataset. Demonstrates a 6-step workflow:
+`legacy/reference_qmd/Análise multivariada_A2_ACM_AC.qmd` — MCA + Cluster Analysis tutorial (Daniela Craveiro). Uses `FactoMineR`/`factoextra` with the `hobbies` dataset. Demonstrates a 6-step workflow:
 1. Data adequacy assessment
 2. Dimensionality (eigenvalues, inertia, scree)
 3. Interpret dimensions (discrimination measures, eta2)
@@ -138,9 +168,25 @@ All session logs are stored in `log/session_YYYY-MM-DD.md`. Always consult the m
 - **Next**: Begin Phase 1 — attitudinal variable selection and harmonisation
 
 ### 2026-02-14 — Master Widening & Participation Recoding
-- Fixed `04_final_merge.R`: removed restrictive `select()` that kept only ~25 vars; master now retains ALL 1,682 original ESS + derived variables. Previous version archived at `scripts/archive/04_final_merge_v1.R`.
+- Fixed `04_final_merge.R`: removed restrictive `select()` that kept only ~25 vars; master now retains ALL 1,682 original ESS + derived variables. Previous version archived at `legacy/archive/04_final_merge_v1.R`.
 - Created `06_participation.R`: recodes 6 political participation items as dummies (0/1/NA), harmonises `pbldmn`/`pbldmna` across rounds via `coalesce()`, recodes `vote` value 3 ("Not eligible") to NA.
 - Master dimensions: 67,358 × 1,688 (1,682 existing + 6 new dummies).
 - Noted methodological references for future LCA: Oser (2022), Jeroense & Spierings (2023). Packages: `multilevLCA`, `poLCA`.
 - **Project state**: Master dataset complete with all ESS variables + class schemes + participation dummies. LCA for participation profiles not yet started.
 - **Next**: Latent Class Analysis (country-specific + regional) to derive participation profiles from the 6 dummies.
+
+### 2026-02-16 — Humphreys-style Workflow Reorganization
+- Reorganized entire project to follow Macartan Humphreys' `sample_project` radial workflow pattern.
+- Promoted 6 active pipeline scripts from `scripts/legacy/v2_archive/R_scripts/` → `scripts/` (top-level).
+- Moved Oesch helper files to `scripts/helpers/`.
+- Consolidated legacy material: v1 scripts → `legacy/scripts_v1/`, archived scripts → `legacy/archive/`, QMD tutorials → `legacy/reference_qmd/`, empty dirs → `legacy/old_dirs/`.
+- Renamed `README.md` → `0_README.md` (Humphreys convention).
+- Created Quarto stubs: `1_analysis.qmd` (central analysis), `3_presentation.qmd` (reveal.js), `4_paper.qmd` (manuscript), `5_overleaf_prep.qmd` (export).
+- Created `2_replication_code.R` (auto-generated stub via `knitr::purl`).
+- Created `assets/` with `bib.bib` (starter bibliography) and `apsr.csl` (APSA citation style).
+- Created `saved/` for shared workspace persistence, `exports/` for Overleaf outputs.
+- Updated `.gitignore` for new paths (`saved/`, `exports/`, `*_files/`, `*.html`, `*_cache/`).
+- Updated `# Path:` comments in all 6 R scripts.
+- All moves via `git mv` (history preserved). No files deleted (Iron Rule 1).
+- **Project state**: Project restructured for Humphreys-style workflow. Data pipeline functional. Analysis not yet started.
+- **Next**: Begin Phase 1 — attitudinal variable selection and harmonisation in `1_analysis.qmd`.

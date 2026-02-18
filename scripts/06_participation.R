@@ -1,6 +1,6 @@
 # ==============================================================================
 # Script: 06_participation.R
-# Path:   scripts/legacy/v2_archive/R_scripts/06_participation.R
+# Path:   scripts/06_participation.R
 # Purpose: Recode political participation variables as dummies (0/1),
 #          harmonise pbldmn/pbldmna across rounds, prepare inputs for LCA.
 # Input:   data/master/ess_final.rds

@@ -44,7 +44,7 @@ Political space is treated as a **relational structure of oppositions**, not as 
 
 | Situation | Action |
 |-----------|--------|
-| A script is superseded by a new version | Move the old script to `scripts/archive/` (or relevant `archive/` subdirectory) |
+| A script is superseded by a new version | Move the old script to `legacy/archive/` (or relevant `archive/` subdirectory) |
 | A data file is replaced | Move the old version to `data/archive/` |
 | Code is deprecated | Rename with `_deprecated` suffix or move to `legacy/` |
 | A file is no longer needed | Keep it where it is, or move to `archive/` — never delete |
@@ -104,14 +104,14 @@ European Social Survey (ESS), integrated file covering Rounds 1–11.
 
 ## 6. Data Engineering Pipeline
 
-The dataset is built via **6 sequential R scripts** located in `scripts/legacy/v2_archive/R_scripts/`. They must be executed in order. Each script reads from the previous output and writes to a defined location.
+The dataset is built via **6 sequential R scripts** located in `scripts/`. They must be executed in order. Each script reads from the previous output and writes to a defined location.
 
 | # | Script | Action | Key Logic | Output |
 |---|--------|--------|-----------|--------|
 | 01 | `01_cleaning.R` | Filter and pre-clean | Filters for PT, ES, GR, IT; age >= 18. Normalises column names to lowercase. Pads ISCO codes to 4 digits. Cleans employment relation (`emplrel`), employee count (`emplno`), supervisor status (`jbspv`). | `data/temp/01_filtered_data.rds` |
 | 02 | `02_weighting.R` | Calculate analysis weights | Computes `analysis_weight = pspwght * pweight * 10000`. See weighting strategy below. | `data/temp/02_weighted_data.rds` |
 | 03 | `03_class_coding.R` | Derive class schemes | Oesch 16/8: manual syntax (Oesch's original ranges). ORDC and EGP: via `DIGCLASS` package (ISCO-88 bridged). Microclass: via `DIGCLASS` (Rounds 6–11 only, requires ISCO-08). | `data/temp/03_classed_data.rds` |
-| 04 | `04_final_merge.R` | Label, aggregate, finalise | Aggregates Oesch 16 → Oesch 5. Applies factor labels to all class schemes. Maps unmapped ORDC codes to "14. Unclassifiable". **Retains ALL original ESS variables** (v2; previous restrictive version archived at `scripts/archive/04_final_merge_v1.R`). | `data/master/ess_final.rds` |
+| 04 | `04_final_merge.R` | Label, aggregate, finalise | Aggregates Oesch 16 → Oesch 5. Applies factor labels to all class schemes. Maps unmapped ORDC codes to "14. Unclassifiable". **Retains ALL original ESS variables** (v2; previous restrictive version archived at `legacy/archive/04_final_merge_v1.R`). | `data/master/ess_final.rds` |
 | 05 | `05_descriptives.R` | Audit and visualise | Generates coverage heatmaps and class distribution plots. Applies Plasma palette standards. | `figures/*.png`, `figures/*.pdf` |
 | 06 | `06_participation.R` | Recode participation dummies | Recodes 6 political participation items as dummies (0/1). Harmonises `pbldmn`/`pbldmna` across rounds via `coalesce()`. Recodes `vote` 3 ("Not eligible") to NA. | `data/master/ess_final.rds` (updated) |
 
@@ -426,30 +426,38 @@ These rules are binding. They follow directly from the relational-geometric fram
 
 ```
 mapping/
-├── data/
-│   ├── raw/ESS/                  Read-only source: ess_integrated_rounds1_11.csv [.gitignored]
-│   ├── temp/                     Intermediate pipeline outputs (.rds) [.gitignored]
-│   ├── master/                   ess_final.rds (single source of truth) [.gitignored]
-│   └── archive/                  Previous master/data versions [.gitignored]
-├── scripts/
-│   ├── legacy/
-│   │   ├── v2_archive/R_scripts/ Active pipeline: 01–05 sequential R scripts
-│   │   ├── v1_archive/           Deprecated pipeline (preserved, never deleted)
-│   │   ├── oesch_source/         Oesch class coding reference data (.txt)
-│   │   └── *.qmd                 Quarto reference files (MCA/PCA interpretation logic)
-│   └── archive/                  Superseded scripts (moved here, never deleted)
-├── figures/                      Generated plots: PNG (300dpi) + PDF
-├── tables/                       Audit tables, class distributions (.csv)
+├── 0_README.md                    This file (renamed from README.md)
+├── 1_analysis.qmd                 Central Quarto analysis document
+├── 2_replication_code.R           Auto-generated replication code (via knitr::purl)
+├── 3_presentation.qmd            Reveal.js presentation slides
+├── 4_paper.qmd                   PhD chapter / journal manuscript
+├── 5_overleaf_prep.qmd           Export figures/tables for Overleaf
+├── CLAUDE.md                     Claude Code project brief (updated every session)
+├── mappingSE.Rproj               RStudio project file
+├── assets/                       Bibliography (bib.bib) + citation style (apsr.csl)
+├── saved/                        Shared workspace (.Rdata/.rds) [.gitignored]
+├── exports/                      Overleaf-ready outputs [.gitignored]
+│   ├── figures/                  PNG (300dpi) + PDF
+│   └── tables/                   LaTeX code
+├── data/                         [all .gitignored]
+│   ├── raw/ESS/                  Read-only source: ess_integrated_rounds1_11.csv
+│   ├── temp/                     Intermediate pipeline outputs (.rds)
+│   ├── master/                   ess_final.rds (single source of truth)
+│   └── archive/                  Previous master/data versions
+├── scripts/                      Active pipeline (01–06, sequential)
+│   ├── 01_cleaning.R ... 06_participation.R
+│   └── helpers/                  Oesch reference data (.txt)
+├── figures/                      Audit PNG (300dpi) + PDF outputs
+├── tables/                       Audit tables (.csv)
 ├── articles/                     Reference literature (PDFs) [.gitignored]
 ├── misc/                         ESS documentation, ISCO correspondence tables
-├── legacy/                       Historical README and execution logs
 ├── log/                          Session logs (one .md per working session)
-├── writing/                      Future LaTeX manuscripts
-├── presentation/                 Future Beamer slides
-├── .gitignore                    Git exclusion rules
-├── CLAUDE.md                     Claude Code project brief (updated every session)
-├── README.md                     This file
-└── mappingSE.Rproj               RStudio project file
+└── legacy/                       All historical material
+    ├── scripts_v1/               Deprecated v1 pipeline
+    ├── archive/                  Superseded scripts (04_v1, etc.)
+    ├── reference_qmd/            MCA/PCA tutorial QMDs
+    ├── old_dirs/                 Empty writing/ and presentation/ dirs
+    └── log/                      Historical execution logs
 ```
 
 ---
@@ -461,7 +469,7 @@ mapping/
 | ID | Decision | Rationale |
 |----|----------|-----------|
 | D01 | Input data converted to `.rds` immediately | Preserves R data types and avoids repeated CSV parsing |
-| D02 | "Keep All Variables" approach throughout pipeline | Prevents accidental data loss; Script 04 v2 retains all original ESS columns (v1 had a restrictive `select()` — archived at `scripts/archive/04_final_merge_v1.R`) |
+| D02 | "Keep All Variables" approach throughout pipeline | Prevents accidental data loss; Script 04 v2 retains all original ESS columns (v1 had a restrictive `select()` — archived at `legacy/archive/04_final_merge_v1.R`) |
 | D03 | ORDC gap: unmapped codes → "14. Unclassifiable" | ~15% of respondents fall outside standard 13 classes. Dropping them would silently bias distributions. Explicit 14th category makes the gap visible and auditable. |
 | D04 | Heatmap palette: lighter (yellow) = higher coverage | Better visual contrast than "darker = higher" |
 
@@ -506,7 +514,7 @@ mapping/
 
 ## 18. Methodological Reference: MCA + Cluster Analysis Tutorial
 
-The file `scripts/legacy/Análise multivariada_A2_ACM_AC.qmd` (Daniela Craveiro) contains a complete MCA + Cluster Analysis tutorial from a Methods course, using `FactoMineR`/`factoextra` with the `hobbies` dataset. It demonstrates a 6-step workflow:
+The file `legacy/reference_qmd/Análise multivariada_A2_ACM_AC.qmd` (Daniela Craveiro) contains a complete MCA + Cluster Analysis tutorial from a Methods course, using `FactoMineR`/`factoextra` with the `hobbies` dataset. It demonstrates a 6-step workflow:
 
 1. **Data adequacy** — Check categorical structure, residual categories, sample representation
 2. **Dimensionality** — Eigenvalues, inertia, scree plot; retain dimensions
@@ -525,7 +533,7 @@ This tutorial serves as **procedural inspiration** for our analysis. Our project
 ## 19. References and Resources
 
 - **ESS Weighting Guide V1.1** — weighting strategy foundation
-- **Oesch class schema** — original ISCO-based coding syntax (source files in `scripts/legacy/oesch_source/`)
+- **Oesch class schema** — original ISCO-based coding syntax (source files in `scripts/helpers/`)
 - **DIGCLASS R package** — automated ORDC, EGP, and Microclass derivation
 - **ISCO-88 / ISCO-08 correspondence** — `misc/Correspondence_EN_ISCO_08_to_ISCO_88.xlsx`
 - Reference articles in `articles/`:

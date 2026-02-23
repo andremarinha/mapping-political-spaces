@@ -1,0 +1,88 @@
+=== 07_attitudinal_recoding.R ===
+Timestamp: 2026-02-23 14:07:42 
+
+Input dimensions: 67358 x 1688 
+
+--- freehms_r ---
+Original freehms:
+
+    1     2     3     4     5     7     8     9 
+21323 25208  9770  5186  3150   462  2222    37 
+Recoded freehms_r:
+
+    1     2     3     4     5  <NA> 
+ 3150  5186  9770 25208 21323  2721 
+
+--- gincdif_r ---
+Original gincdif:
+
+    1     2     3     4     5     7     8     9 
+25728 29936  6695  2966   671   137  1172    53 
+Recoded gincdif_r:
+
+    1     2     3     4     5  <NA> 
+  671  2966  6695 29936 25728  1362 
+
+--- polintr_r ---
+Original polintr:
+
+    1     2     3     4     7     8     9 
+ 5207 16976 23599 21403    63   103     7 
+Recoded polintr_r:
+
+    1     2     3     4  <NA> 
+21403 23599 16976  5207   173 
+
+--- rlgblg_r ---
+Original rlgblg:
+
+    1     2     7     8     9  <NA> 
+51484 13277   215   146     5  2231 
+Recoded rlgblg_r:
+
+    0     1  <NA> 
+13277 51484  2597 
+
+--- rlgatnd_r ---
+Original rlgatnd:
+
+    1     2     3     4     5     6     7    77    88    99 
+  811  2523 11346 10221 13900 11017 16959   289   244    48 
+Recoded rlgatnd_r:
+
+    1     2     3  <NA> 
+24901 24917 16959   581 
+
+--- domicil_r ---
+Original domicil:
+
+    1     2     3     4     5     7     8     9 
+16589  6813 19197 23302  1228    50   127    52 
+Recoded domicil_r:
+
+    1     2     3     4  <NA> 
+16589  6813 19197 24530   229 
+
+--- mother_edu_5cat ---
+mother_edu_5cat:
+
+    1     2     3     4     5  <NA> 
+44071  7584  5187   536  2579  7401 
+father_edu_5cat:
+
+    1     2     3     4     5  <NA> 
+41558  8766  6007   879  4047  6101 
+
+mother_edu_5cat valid cases by round:
+   1    2    3    4    5    6    7    8    9   10   11 
+6603 5772 3797 6551 6436 4651 2975 5409 5126 4210 8427 
+father_edu_5cat valid cases by round:
+   1    2    3    4    5    6    7    8    9   10   11 
+6484 5708 3689 6417 6277 4490 2871 5265 4983 6808 8265 
+
+Archived previous master to: data/archive/ess_final_pre07_20260223_140747.rds 
+
+Output dimensions: 67358 x 1696 
+New columns: freehms_r, gincdif_r, polintr_r, rlgblg_r, rlgatnd_r, domicil_r, mother_edu_5cat, father_edu_5cat
+
+=== Done ===

@@ -76,7 +76,7 @@ mapping/
 ```
 
 ## Data Pipeline
-Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_class_coding.R` → `04_final_merge.R` → `05_descriptives.R` → `06_participation.R`. Master output: `data/master/ess_final.rds` (67,358 × 1,688 — ALL original ESS variables + derived class/weight/participation variables).
+Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_class_coding.R` → `04_final_merge.R` → `05_descriptives.R` → `06_participation.R` → `07_attitudinal_recoding.R`. Master output: `data/master/ess_final.rds` (67,358 × 1,696 — ALL original ESS variables + derived class/weight/participation/attitudinal variables).
 
 **Note:** Script 04 was updated (2026-02-14) to retain ALL original ESS columns. Previous version archived at `legacy/archive/04_final_merge_v1.R`.
 
@@ -99,6 +99,20 @@ Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_clas
 | `vote_d` | `vote` | 1–11 | 3="Not eligible"→NA |
 
 **Next step:** Latent Class Analysis (country-specific + regional) using `multilevLCA` or `poLCA` to derive participation profiles from these dummies (following Oser 2022; Jeroense & Spierings 2023).
+
+## Attitudinal & Structural Recodes (Script 07)
+| Variable | Source | Recode | Rounds |
+|----------|--------|--------|--------|
+| `freehms_r` | `freehms` | Reversed: 1=Disagree strongly...5=Strongly agree | 1–11 |
+| `gincdif_r` | `gincdif` | Reversed: 1=Disagree strongly...5=Strongly agree | 1–11 |
+| `polintr_r` | `polintr` | Reversed: 1=Not at all...4=Very interested | 1–11 |
+| `rlgblg_r` | `rlgblg` | 0=No, 1=Yes | 1–11 |
+| `rlgatnd_r` | `rlgatnd` | 1=Active, 2=Occasional, 3=Not religious | 1–11 |
+| `domicil_r` | `domicil` | 1=Urban, 2=Suburban, 3=Town, 4=Rural | 1–11 |
+| `mother_edu_5cat` | `edulvlma`+`eiscedm` | Harmonised 5-cat ISCED via `coalesce()` | 1–11 |
+| `father_edu_5cat` | `edulvlfa`+`eiscedf` | Harmonised 5-cat ISCED via `coalesce()` | 1–11 |
+
+Reversal logic follows Delespaul (2025). Parental education harmonised across two ESS coding systems (5-cat ISCED for R1–4, 7-cat ES-ISCED for R4–11) into common 5 categories; ES-ISCED preferred where both available.
 
 ## Coding Strategy (Frozen)
 - **Primary analysis**: Disjunctive (categorical/indicator) coding of all attitudinal variables
@@ -190,3 +204,12 @@ All session logs are stored in `log/session_YYYY-MM-DD.md`. Always consult the m
 - All moves via `git mv` (history preserved). No files deleted (Iron Rule 1).
 - **Project state**: Project restructured for Humphreys-style workflow. Data pipeline functional. Analysis not yet started.
 - **Next**: Begin Phase 1 — attitudinal variable selection and harmonisation in `1_analysis.qmd`.
+
+### 2026-02-23 — Attitudinal & Structural Variable Recoding
+- Created `07_attitudinal_recoding.R`: recodes 8 variables for downstream MCA/LCA analysis.
+- Recoded: `freehms_r`, `gincdif_r` (reversed per Delespaul 2025), `polintr_r` (reversed), `rlgblg_r` (binary), `rlgatnd_r` (7→3 categories), `domicil_r` (5→4 categories).
+- Harmonised parental education: `mother_edu_5cat` and `father_edu_5cat` from two ESS coding systems (5-cat ISCED R1–4 + 7-cat ES-ISCED R4–11) into common 5-category scale via `coalesce()`.
+- Master dimensions: 67,358 × 1,696 (1,688 + 8 new columns).
+- Decided LCA indicator set: 6 existing participation dummies (R1–11 coverage), not adding wrkorg/wrkprty (which would restrict to R1–9).
+- **Project state**: Data engineering extended with attitudinal recodes. LCA-MCA implementation plan drafted. Ready to begin coding analysis.
+- **Next**: Implement LCA-MCA analysis in `1_analysis.qmd`.

@@ -104,7 +104,7 @@ European Social Survey (ESS), integrated file covering Rounds 1–11.
 
 ## 6. Data Engineering Pipeline
 
-The dataset is built via **6 sequential R scripts** located in `scripts/`. They must be executed in order. Each script reads from the previous output and writes to a defined location.
+The dataset is built via **7 sequential R scripts** located in `scripts/`. They must be executed in order. Each script reads from the previous output and writes to a defined location.
 
 | # | Script | Action | Key Logic | Output |
 |---|--------|--------|-----------|--------|
@@ -114,8 +114,9 @@ The dataset is built via **6 sequential R scripts** located in `scripts/`. They 
 | 04 | `04_final_merge.R` | Label, aggregate, finalise | Aggregates Oesch 16 → Oesch 5. Applies factor labels to all class schemes. Maps unmapped ORDC codes to "14. Unclassifiable". **Retains ALL original ESS variables** (v2; previous restrictive version archived at `legacy/archive/04_final_merge_v1.R`). | `data/master/ess_final.rds` |
 | 05 | `05_descriptives.R` | Audit and visualise | Generates coverage heatmaps and class distribution plots. Applies Plasma palette standards. | `figures/*.png`, `figures/*.pdf` |
 | 06 | `06_participation.R` | Recode participation dummies | Recodes 6 political participation items as dummies (0/1). Harmonises `pbldmn`/`pbldmna` across rounds via `coalesce()`. Recodes `vote` 3 ("Not eligible") to NA. | `data/master/ess_final.rds` (updated) |
+| 07 | `07_attitudinal_recoding.R` | Recode attitudinal & structural variables | Reverses `freehms`, `gincdif`, `polintr` (Delespaul 2025). Recodes `rlgblg` to 0/1, `rlgatnd` to 3-cat, `domicil` to 4-cat. Harmonises parental education (`mother_edu_5cat`, `father_edu_5cat`) from two ESS coding systems via `coalesce()`. | `data/master/ess_final.rds` (updated) |
 
-**Master dataset:** 67,358 rows × 1,688 columns (all original ESS variables + derived class, weight, and participation variables).
+**Master dataset:** 67,358 rows × 1,696 columns (all original ESS variables + derived class, weight, participation, and attitudinal variables).
 
 ### Weighting Strategy
 
@@ -494,6 +495,11 @@ mapping/
 | D14 | `pbldmn` + `pbldmna` harmonised via `coalesce()` | Same concept split at Round 10; `coalesce()` prefers R1-9 variable, falls back to R10-11 |
 | D15 | Participation profiles via LCA (not arbitrary typology) | Following Oser (2022) and Jeroense & Spierings (2023): data-driven profiles are more defensible than ad hoc combinatorial categories |
 | D16 | Country-specific + regional (pooled) LCA models | Consistent with project's country-specific analytical strategy (D06), with regional model for cross-national comparison |
+| D17 | LCA indicator set: 6 participation dummies (R1–11) | Maximises diachronic comparability; adding `wrkorg`/`wrkprty` would restrict to R1–9 |
+| D18 | `freehms`, `gincdif`, `polintr` reversed (higher = more agreement/interest) | Following Delespaul (2025); ensures consistent interpretive direction |
+| D19 | `rlgatnd` collapsed 7→3: Active / Occasional / Not religious | Avoids sparsity in extreme daily-attendance categories while preserving key sociological distinction |
+| D20 | `domicil` collapsed 5→4: Urban / Suburban / Town / Rural | Farm category merged with village; preserves metropolitan core vs. periphery distinction |
+| D21 | Parental education harmonised via `coalesce()`: ES-ISCED preferred over old ISCED where both available | Finer granularity of 7-cat ES-ISCED (R4–11) preferred; old 5-cat ISCED (R1–4) used as fallback |
 
 ---
 

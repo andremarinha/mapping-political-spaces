@@ -13,25 +13,46 @@ execute:
   echo: true
   warning: false
   message: false
+  cache: true
 bibliography: assets/bib.bib
 ---
 
-# Setup
+# Setup {.unnumbered}
 
 ```{r}
 #| label: setup
-#| include: false
+#| cache: false
 
 library(tidyverse)
 library(FactoMineR)
 library(factoextra)
-# library(multilevLCA)  # uncomment when LCA phase begins
-# library(poLCA)
+library(poLCA)
+library(patchwork)
+library(scales)
 
-theme_set(theme_minimal())
+# poLCA loads MASS which masks dplyr::select — restore it
+select <- dplyr::select
 
-# Load master dataset (produced by scripts/01-06 pipeline)
+theme_set(theme_minimal(base_size = 12))
+
+# Colour palette (project standard)
+plasma_pal <- viridis::plasma
+
+# Load master dataset
 df <- readRDS("data/master/ess_final.rds")
+
+# Define key variable sets
+active_vars <- c("freehms_r", "gincdif_r",
+                  "imbgeco_3cat", "imueclt_3cat", "imwbcnt_3cat")
+
+participation_vars <- c("badge_d", "bctprd_d", "contplt_d",
+                         "sgnptit_d", "pbldmn_d", "vote_d")
+
+sup_vars_socdem <- c("oesch8", "domicil_r", "income_quint_h",
+                      "eisced_5cat", "mother_edu_5cat", "father_edu_5cat")
+
+countries <- c("PT", "ES", "GR", "IT")
+country_labels <- c(PT = "Portugal", ES = "Spain", GR = "Greece", IT = "Italy")
 ```
 
 # Data Overview
@@ -41,65 +62,764 @@ df <- readRDS("data/master/ess_final.rds")
 
 cat("Master dimensions:", nrow(df), "x", ncol(df), "\n")
 cat("Countries:", paste(unique(df$cntry), collapse = ", "), "\n")
-cat("Rounds:", paste(sort(unique(df$essround)), collapse = ", "), "\n")
+cat("Rounds:", paste(sort(unique(df$essround)), collapse = ", "), "\n\n")
 
 # Observations by country and round
-table(df$cntry, df$essround)
+cat("--- Sample size by country x round ---\n")
+print(addmargins(table(df$cntry, df$essround)))
+
+# Complete cases on MFA active variables
+df_active <- df %>% filter(if_all(all_of(active_vars), ~ !is.na(.)))
+cat("\n--- MFA active variable complete cases ---\n")
+cat("Total:", nrow(df_active), "/", nrow(df),
+    "(", round(100 * nrow(df_active) / nrow(df), 1), "%)\n")
+print(addmargins(table(df_active$cntry, df_active$essround)))
 ```
 
-# Phase 1: Attitudinal Variable Selection
 
-<!-- TODO: Harmonisation audit, variable retention decisions -->
-<!-- Identify candidate ESS items available across all 11 rounds -->
-<!-- Audit category stability and missingness patterns -->
+# LCA: Participation Repertoires
 
-# Phase 2: MCA / MFA Analysis
+Latent Class Analysis identifies distinct **participation repertoires** from the
+six binary political participation indicators. The measurement model is purely
+behavioural: class membership is determined by patterns of participation, not by
+social characteristics. Oesch classes, party vote, and other structural variables
+are kept separate and will be projected as supplementary in the MFA space.
 
-<!-- TODO: Per-country MCA, then MFA across rounds -->
-<!-- Country-specific analyses (no forced cross-national equivalence) -->
+Following Oser (2022) and Jeroense & Spierings (2023), we fit pooled
+within-country LCA models. Pooling across rounds maximises sample size and
+produces stable repertoire types; temporal variation in repertoire prevalence
+is captured downstream when examining class x round distributions.
 
-## Portugal
+## Data Preparation
 
-## Spain
+```{r}
+#| label: lca-data-prep
 
-## Greece
+# poLCA requires:
+#   - Variables coded as integers starting from 1 (not 0)
+#   - No NAs on indicator variables (rows with any NA are dropped)
 
-## Italy
+lca_data <- df %>%
+  select(idno, cntry, essround, all_of(participation_vars)) %>%
+  # Recode 0/1 -> 1/2 for poLCA (1 = No, 2 = Yes)
+  mutate(across(all_of(participation_vars), ~ . + 1L)) %>%
+  # Keep only complete cases on all 6 indicators
+  filter(if_all(all_of(participation_vars), ~ !is.na(.)))
 
-# Phase 3: Dimensionality
+cat("LCA-ready observations:", nrow(lca_data), "/", nrow(df), "\n\n")
+cat("By country:\n")
+print(table(lca_data$cntry))
+cat("\nBy country x round:\n")
+print(addmargins(table(lca_data$cntry, lca_data$essround)))
+```
 
-<!-- TODO: Eigenvalues, inertia, scree plots, modified rates -->
-<!-- MCA inertia is NOT explained variance -->
+## Model Fitting
 
-# Phase 4: Dimension Interpretation
+```{r}
+#| label: lca-fit-function
 
-<!-- TODO: Discrimination measures, eta-squared, contributions -->
+# Helper: fit LCA models from K=2 to K=maxK, return list of results
+fit_lca_range <- function(data, vars, maxK = 6, nrep = 20, seed = 42) {
 
-# Phase 5: Category Configurations
+  f <- as.formula(paste0("cbind(",
+                          paste(vars, collapse = ", "),
+                          ") ~ 1"))
 
-<!-- TODO: Contributions, cos2, perceptual maps -->
+  results <- list()
+  for (k in 2:maxK) {
+    set.seed(seed)
+    fit <- poLCA(f, data = data, nclass = k, nrep = nrep,
+                 maxiter = 3000, tol = 1e-6,
+                 verbose = FALSE, graphs = FALSE)
+    results[[paste0("K", k)]] <- fit
+  }
+  return(results)
+}
 
-# Phase 6: Supplementary Projections
+# Helper: extract fit statistics
+lca_fit_table <- function(models) {
+  tibble(
+    K       = as.integer(gsub("K", "", names(models))),
+    logLik  = map_dbl(models, ~ .x$llik),
+    AIC     = map_dbl(models, ~ .x$aic),
+    BIC     = map_dbl(models, ~ .x$bic),
+    npar    = map_dbl(models, ~ .x$npar),
+    Gsq     = map_dbl(models, ~ .x$Gsq),
+    # Entropy: 1 - (sum of individual classification uncertainty) / (N * log(K))
+    entropy = map2_dbl(models, as.integer(gsub("K", "", names(models))), function(m, k) {
+      pp <- m$posterior
+      pp[pp < 1e-10] <- 1e-10  # avoid log(0)
+      H <- -sum(pp * log(pp))
+      1 - H / (nrow(pp) * log(k))
+    })
+  )
+}
+```
 
-<!-- TODO: Oesch classes and parties as barycentres -->
+```{r}
+#| label: lca-fit-all
+#| cache: true
 
-# Phase 7: Participation Profiles (LCA)
+# Fit LCA models per country (K=2 to K=6)
+lca_models <- list()
+lca_fits   <- list()
 
-<!-- TODO: Latent class analysis of participation dummies -->
-<!-- Country-specific models for PT, ES, GR, IT + regional (pooled) model -->
-<!-- Following Oser (2022), Jeroense & Spierings (2023) -->
-<!-- Packages: multilevLCA, poLCA -->
+for (cc in countries) {
+  cat("Fitting LCA for", country_labels[cc], "...\n")
+  cc_data <- lca_data %>% filter(cntry == cc)
+  lca_models[[cc]] <- fit_lca_range(cc_data, participation_vars)
+  lca_fits[[cc]]   <- lca_fit_table(lca_models[[cc]])
+}
+```
 
-# Phase 8: Cluster Analysis
+## Model Selection
 
-<!-- TODO: Hierarchical + K-means on MCA coordinates -->
-<!-- Carvalho (2008) approach -->
+```{r}
+#| label: lca-model-selection
+#| fig-width: 10
+#| fig-height: 8
 
-# Save Workspace
+# Plot BIC and entropy for all countries
+plots_bic <- list()
+plots_ent <- list()
+
+for (cc in countries) {
+  ft <- lca_fits[[cc]]
+
+  plots_bic[[cc]] <- ggplot(ft, aes(K, BIC)) +
+    geom_line(linewidth = 0.8) + geom_point(size = 2) +
+    scale_x_continuous(breaks = ft$K) +
+    labs(title = country_labels[cc], y = "BIC") +
+    theme(plot.title = element_text(face = "bold", size = 11))
+
+  plots_ent[[cc]] <- ggplot(ft, aes(K, entropy)) +
+    geom_line(linewidth = 0.8) + geom_point(size = 2) +
+    scale_x_continuous(breaks = ft$K) +
+    scale_y_continuous(limits = c(0, 1)) +
+    labs(title = country_labels[cc], y = "Entropy") +
+    theme(plot.title = element_text(face = "bold", size = 11))
+}
+
+(plots_bic[["PT"]] + plots_bic[["ES"]] + plots_bic[["GR"]] + plots_bic[["IT"]]) /
+(plots_ent[["PT"]] + plots_ent[["ES"]] + plots_ent[["GR"]] + plots_ent[["IT"]]) +
+  plot_annotation(title = "LCA Model Selection: BIC and Entropy by Number of Classes")
+```
+
+```{r}
+#| label: lca-fit-tables
+
+# Print fit tables
+for (cc in countries) {
+  cat("\n===", country_labels[cc], "===\n")
+  print(lca_fits[[cc]], n = 10)
+}
+```
+
+## Class Profiles
+
+After inspecting the BIC and entropy plots above, select the optimal K for each
+country. The default below uses the K that minimises BIC. Adjust manually if
+substantive interpretability suggests a different solution.
+
+```{r}
+#| label: lca-select-k
+
+# Select K per country: minimum BIC (can be overridden manually)
+selected_k <- map_int(lca_fits, ~ .x$K[which.min(.x$BIC)])
+cat("Selected K (min BIC):\n")
+print(selected_k)
+
+# Extract the selected models
+lca_selected <- map2(lca_models, paste0("K", selected_k), ~ .x[[.y]])
+```
+
+```{r}
+#| label: lca-profiles
+#| fig-width: 12
+#| fig-height: 10
+
+# Item-response probability plots
+participation_labels <- c(
+  badge_d   = "Worn badge",
+  bctprd_d  = "Boycotted",
+  contplt_d = "Contacted politician",
+  sgnptit_d = "Signed petition",
+  pbldmn_d  = "Demonstrated",
+  vote_d    = "Voted"
+)
+
+plot_lca_profiles <- function(model, country_label) {
+  probs <- model$probs
+  K <- length(probs[[1]][,1])
+
+  # Extract P(Yes) for each item and class
+  prof_df <- map_dfr(names(probs), function(var) {
+    # Column 2 = P(response = 2) = P(Yes) since we coded 1=No, 2=Yes
+    tibble(
+      variable = var,
+      class = 1:K,
+      prob_yes = probs[[var]][, 2]
+    )
+  })
+
+  prof_df <- prof_df %>%
+    mutate(
+      variable = factor(variable, levels = participation_vars,
+                        labels = participation_labels),
+      class = factor(class)
+    )
+
+  ggplot(prof_df, aes(variable, prob_yes, fill = class)) +
+    geom_col(position = position_dodge(width = 0.8), width = 0.7) +
+    scale_y_continuous(limits = c(0, 1), labels = percent) +
+    scale_fill_viridis_d(option = "plasma", end = 0.85) +
+    labs(title = country_label,
+         x = NULL, y = "P(Yes)", fill = "Class") +
+    theme(axis.text.x = element_text(angle = 30, hjust = 1),
+          plot.title = element_text(face = "bold"))
+}
+
+profile_plots <- map2(lca_selected, country_labels[names(lca_selected)],
+                       plot_lca_profiles)
+
+(profile_plots[[1]] + profile_plots[[2]]) /
+(profile_plots[[3]] + profile_plots[[4]]) +
+  plot_annotation(title = "LCA Item-Response Probabilities (P(Yes) by Class)")
+```
+
+```{r}
+#| label: lca-class-sizes
+
+# Class prevalence (mixing proportions)
+for (cc in countries) {
+  model <- lca_selected[[cc]]
+  cat("\n===", country_labels[cc], "(K =", selected_k[cc], ") ===\n")
+  cat("Class sizes (proportions):\n")
+  print(round(model$P, 3))
+  cat("Class sizes (N):\n")
+  print(round(model$P * model$N))
+}
+```
+
+## Assign Repertoire Classes
+
+```{r}
+#| label: lca-assign
+
+# Assign each individual to their most likely class (modal assignment)
+# Add back to the LCA data, then merge to master
+
+lca_assignments <- list()
+for (cc in countries) {
+  cc_data <- lca_data %>% filter(cntry == cc)
+  model <- lca_selected[[cc]]
+  cc_data$lca_class <- model$predclass
+  lca_assignments[[cc]] <- cc_data %>% select(idno, cntry, essround, lca_class)
+}
+
+lca_all <- bind_rows(lca_assignments)
+
+# Merge to master: add lca_class column
+df <- df %>%
+  left_join(lca_all %>% select(idno, cntry, essround, lca_class),
+            by = c("idno", "cntry", "essround"))
+
+cat("LCA class assigned:", sum(!is.na(df$lca_class)), "/", nrow(df), "\n")
+cat("By country:\n")
+print(table(df$cntry[!is.na(df$lca_class)]))
+```
+
+
+# MFA: Political Space Construction
+
+Multiple Factor Analysis constructs a **political space** from the five
+attitudinal variables. Each ESS round forms a separate group (block) of the same
+five variables. MFA normalises each round's contribution and produces:
+
+- A **compromise space**: the common structure of political attitudes across all rounds
+- **Partial representations**: how each round deviates from the compromise
+- **Supplementary projections**: where social classes, income groups, education
+  levels, urbanisation categories, and participation repertoires sit in the space
+
+The active variables defining the political space are all categorical:
+
+- `freehms_r` (1–5): Gay rights (cultural liberalism)
+- `gincdif_r` (1–5): Income redistribution (economic egalitarianism)
+- `imbgeco_3cat` (1–3): Immigration — economy
+- `imueclt_3cat` (1–3): Immigration — culture
+- `imwbcnt_3cat` (1–3): Immigration — overall
+
+## Helper Functions
+
+```{r}
+#| label: mfa-helpers
+
+# Build the wide data frame for MFA
+# Each round becomes a group of 5 active variables (all categorical)
+# Individuals only have data in their own round's columns; rest are NA
+# Supplementary variables are appended as additional groups
+
+build_mfa_data <- function(data, active_vars, sup_vars, country) {
+
+  # Filter to country + complete cases on active vars
+  cd <- data %>%
+    filter(cntry == country) %>%
+    filter(if_all(all_of(active_vars), ~ !is.na(.)))
+
+  rounds <- sort(unique(cd$essround))
+  n <- nrow(cd)
+  n_active <- length(active_vars)
+  n_rounds <- length(rounds)
+
+  # --- Active groups: one per round ---
+  active_cols <- list()
+  for (i in seq_along(rounds)) {
+    r <- rounds[i]
+    for (v in active_vars) {
+      col_name <- paste0(v, "_R", r)
+      active_cols[[col_name]] <- rep(NA_integer_, n)
+      idx <- which(cd$essround == r)
+      active_cols[[col_name]][idx] <- cd[[v]][idx]
+    }
+  }
+  wide <- as.data.frame(active_cols)
+
+  # Convert active columns to factors
+  for (col in names(wide)) {
+    wide[[col]] <- factor(wide[[col]])
+  }
+
+  # --- Supplementary variables ---
+  for (v in sup_vars) {
+    wide[[v]] <- factor(cd[[v]])
+  }
+
+  # --- MFA parameters ---
+  group_sizes <- c(rep(n_active, n_rounds), rep(1, length(sup_vars)))
+  group_types <- c(rep("n", n_rounds), rep("n", length(sup_vars)))
+  group_names <- c(paste0("R", rounds), sup_vars)
+  sup_group_idx <- (n_rounds + 1):(n_rounds + length(sup_vars))
+
+  list(
+    data        = wide,
+    group       = group_sizes,
+    type        = group_types,
+    name.group  = group_names,
+    num.group.sup = sup_group_idx,
+    rounds      = rounds,
+    meta        = cd %>% select(idno, cntry, essround, oesch8_label)
+  )
+}
+
+# Run MFA
+run_mfa <- function(mfa_input, ncp = 5) {
+  MFA(mfa_input$data,
+      group         = mfa_input$group,
+      type          = mfa_input$type,
+      name.group    = mfa_input$name.group,
+      num.group.sup = mfa_input$num.group.sup,
+      ncp           = ncp,
+      graph         = FALSE)
+}
+```
+
+## Run MFA per Country
+
+```{r}
+#| label: mfa-run
+#| cache: true
+
+# Include LCA class as supplementary if available
+sup_all <- c(sup_vars_socdem, "lca_class")
+
+mfa_inputs  <- list()
+mfa_results <- list()
+
+for (cc in countries) {
+  cat("Building MFA data for", country_labels[cc], "...\n")
+  mfa_inputs[[cc]] <- build_mfa_data(df, active_vars, sup_all, cc)
+  cat("  Individuals:", nrow(mfa_inputs[[cc]]$data),
+      "| Rounds:", length(mfa_inputs[[cc]]$rounds),
+      "| Groups:", length(mfa_inputs[[cc]]$group), "\n")
+
+  cat("Running MFA for", country_labels[cc], "...\n")
+  mfa_results[[cc]] <- run_mfa(mfa_inputs[[cc]])
+  cat("  Done.\n\n")
+}
+```
+
+## Dimensionality
+
+**Note on eigenvalue structure:** Because the ESS is a repeated cross-section
+(not a panel), each individual appears in only **one** round group. The MFA
+normalisation and the block-diagonal indicator matrix produce a characteristic
+flat eigenvalue structure with low per-dimension inertia percentages. This is
+expected and does not indicate a poor solution. Interpretation focuses on the
+**category oppositions** and **supplementary projections**, not on variance
+thresholds. The RV coefficients between rounds will also be near zero because
+groups share no individuals — they capture structural similarity of category
+configurations, not individual-level correlations.
+
+```{r}
+#| label: mfa-eigenvalues
+#| fig-width: 10
+#| fig-height: 8
+
+# Scree plots with Benzécri correction
+eig_plots <- list()
+for (cc in countries) {
+  eig <- mfa_results[[cc]]$eig
+  eig_df <- tibble(
+    dim = 1:nrow(eig),
+    eigenvalue = eig[, 1],
+    pct_var    = eig[, 2],
+    cum_var    = eig[, 3]
+  )
+
+  eig_plots[[cc]] <- ggplot(eig_df %>% filter(dim <= 10),
+                             aes(dim, pct_var)) +
+    geom_col(fill = plasma_pal(10)[3], width = 0.7) +
+    geom_line(aes(y = cum_var), colour = "grey40", linewidth = 0.6) +
+    geom_point(aes(y = cum_var), colour = "grey40", size = 1.5) +
+    scale_x_continuous(breaks = 1:10) +
+    labs(title = country_labels[cc],
+         x = "Dimension", y = "% of variance (inertia)") +
+    theme(plot.title = element_text(face = "bold", size = 11))
+}
+
+(eig_plots[["PT"]] + eig_plots[["ES"]]) /
+(eig_plots[["GR"]] + eig_plots[["IT"]]) +
+  plot_annotation(
+    title = "MFA Scree Plots",
+    subtitle = "Bars = % variance per dimension | Line = cumulative %"
+  )
+```
+
+```{r}
+#| label: mfa-eigenvalue-tables
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], "===\n")
+  eig <- mfa_results[[cc]]$eig
+  print(round(eig[1:min(10, nrow(eig)), ], 3))
+}
+```
+
+## RV Coefficients (Round Similarity)
+
+```{r}
+#| label: mfa-rv-coefficients
+#| fig-width: 10
+#| fig-height: 8
+
+rv_plots <- list()
+for (cc in countries) {
+  rv_mat <- mfa_results[[cc]]$group$RV
+  # Keep only active groups (exclude supplementary)
+  n_active <- length(mfa_inputs[[cc]]$rounds)
+  rv_active <- rv_mat[1:n_active, 1:n_active]
+  rownames(rv_active) <- paste0("R", mfa_inputs[[cc]]$rounds)
+  colnames(rv_active) <- paste0("R", mfa_inputs[[cc]]$rounds)
+
+  rv_long <- as.data.frame(as.table(rv_active)) %>%
+    rename(Round1 = Var1, Round2 = Var2, RV = Freq)
+
+  rv_plots[[cc]] <- ggplot(rv_long, aes(Round1, Round2, fill = RV)) +
+    geom_tile() +
+    geom_text(aes(label = round(RV, 2)), size = 2.5) +
+    scale_fill_viridis_c(option = "plasma", limits = c(0, 1)) +
+    labs(title = country_labels[cc], x = NULL, y = NULL) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          plot.title = element_text(face = "bold", size = 11))
+}
+
+(rv_plots[["PT"]] + rv_plots[["ES"]]) /
+(rv_plots[["GR"]] + rv_plots[["IT"]]) +
+  plot_annotation(title = "RV Coefficients Between ESS Rounds (MFA Groups)")
+```
+
+## Dimension Interpretation: Variable Contributions
+
+```{r}
+#| label: mfa-var-contributions
+#| fig-width: 12
+#| fig-height: 10
+
+# For each country: which variables contribute most to each dimension?
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Group contributions to Dim 1 & 2 ===\n")
+  grp_contrib <- mfa_results[[cc]]$group$contrib
+  n_active <- length(mfa_inputs[[cc]]$rounds)
+  print(round(grp_contrib[1:n_active, 1:2], 2))
+}
+```
+
+```{r}
+#| label: mfa-category-contrib
+#| fig-width: 12
+#| fig-height: 10
+
+# Category contributions to Dim 1 and Dim 2 (compromise)
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Top 15 category contributions ===\n")
+
+  # quali.var contains category-level results for active groups
+  cat_contrib <- mfa_results[[cc]]$quali.var$contrib
+  cat_coord   <- mfa_results[[cc]]$quali.var$coord
+
+  cat("\n-- Dim 1 (top 15 contributors) --\n")
+  top1 <- head(cat_contrib[order(-cat_contrib[, 1]), , drop = FALSE], 15)
+  print(round(cbind(top1[, 1, drop = FALSE], coord = cat_coord[rownames(top1), 1]), 3))
+
+  cat("\n-- Dim 2 (top 15 contributors) --\n")
+  top2 <- head(cat_contrib[order(-cat_contrib[, 2]), , drop = FALSE], 15)
+  print(round(cbind(top2[, 2, drop = FALSE], coord = cat_coord[rownames(top2), 2]), 3))
+}
+```
+
+## Category Configuration Maps
+
+```{r}
+#| label: mfa-category-maps
+#| fig-width: 12
+#| fig-height: 10
+
+# Compromise category maps (Dim 1 x Dim 2)
+cat_map_plots <- list()
+for (cc in countries) {
+  coord <- as.data.frame(mfa_results[[cc]]$quali.var$coord[, 1:2])
+  coord$category <- rownames(coord)
+
+  # Extract the base variable name (before _R suffix)
+  coord$variable <- sub("_R\\d+\\..*$", "", coord$category)
+  # Clean category label
+  coord$label <- sub("^.*\\.", "", coord$category)
+
+  cat_map_plots[[cc]] <- ggplot(coord, aes(Dim.1, Dim.2,
+                                            colour = variable, label = label)) +
+    geom_point(size = 2, alpha = 0.7) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    ggrepel::geom_text_repel(size = 2.5, max.overlaps = 20, show.legend = FALSE) +
+    scale_colour_viridis_d(option = "plasma", end = 0.85) +
+    labs(title = country_labels[cc],
+         x = paste0("Dim 1 (", round(mfa_results[[cc]]$eig[1, 2], 1), "%)"),
+         y = paste0("Dim 2 (", round(mfa_results[[cc]]$eig[2, 2], 1), "%)"),
+         colour = "Variable") +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          legend.position = "bottom")
+}
+
+(cat_map_plots[["PT"]] + cat_map_plots[["ES"]]) /
+(cat_map_plots[["GR"]] + cat_map_plots[["IT"]]) +
+  plot_annotation(title = "MFA Compromise: Category Configurations (Dim 1 x 2)")
+```
+
+
+# Supplementary Projections
+
+```{r}
+#| label: mfa-supplementary
+#| fig-width: 12
+#| fig-height: 10
+
+# Extract supplementary category coordinates (barycentres)
+# These are computed by MFA for the supplementary groups
+
+sup_bary_plots <- list()
+for (cc in countries) {
+  # quali.var.sup contains supplementary qualitative variable results
+  sup_coord <- as.data.frame(mfa_results[[cc]]$quali.var.sup$coord[, 1:2])
+  sup_coord$category <- rownames(sup_coord)
+
+  # Identify which supplementary variable each category belongs to
+  sup_coord$variable <- NA_character_
+  for (sv in sup_all) {
+    idx <- grepl(paste0("^", sv, "\\."), sup_coord$category) |
+           sup_coord$category %in% paste0(sv, ".", levels(factor(df[[sv]])))
+    sup_coord$variable[idx] <- sv
+  }
+  # Clean label
+  sup_coord$label <- sub("^[^\\.]+\\.", "", sup_coord$category)
+
+  # Plot Oesch-8 classes separately (main interest)
+  oesch_coord <- sup_coord %>% filter(variable == "oesch8")
+
+  sup_bary_plots[[cc]] <- ggplot(oesch_coord,
+                                  aes(Dim.1, Dim.2, label = label)) +
+    geom_point(size = 3, colour = plasma_pal(8)[4]) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    ggrepel::geom_text_repel(size = 3, max.overlaps = 15) +
+    labs(title = country_labels[cc],
+         x = paste0("Dim 1 (", round(mfa_results[[cc]]$eig[1, 2], 1), "%)"),
+         y = paste0("Dim 2 (", round(mfa_results[[cc]]$eig[2, 2], 1), "%)")) +
+    theme(plot.title = element_text(face = "bold", size = 11))
+}
+
+(sup_bary_plots[["PT"]] + sup_bary_plots[["ES"]]) /
+(sup_bary_plots[["GR"]] + sup_bary_plots[["IT"]]) +
+  plot_annotation(title = "MFA Compromise: Oesch-8 Class Barycentres (Dim 1 x 2)")
+```
+
+```{r}
+#| label: mfa-sup-all-variables
+
+# Print all supplementary barycentre coordinates
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Supplementary barycentres (Dim 1-2) ===\n")
+  sup_coord <- mfa_results[[cc]]$quali.var.sup$coord
+  print(round(sup_coord[, 1:2], 3))
+}
+```
+
+
+# Partial Representations (Round-Specific)
+
+```{r}
+#| label: mfa-partial-axes
+#| fig-width: 12
+#| fig-height: 10
+
+# Partial axes: how closely each round's axes align with the compromise
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Partial axes correlations (Dim 1-2) ===\n")
+  pa <- mfa_results[[cc]]$partial.axes$coord
+  n_active <- length(mfa_inputs[[cc]]$rounds)
+  # Show only active groups
+  print(round(pa[1:(n_active * 2), 1:2], 3))
+}
+```
+
+
+# Pooled MCA (Robustness Comparison)
+
+As a robustness check, we also run a simple **pooled MCA** on all individuals
+across all rounds, with `essround` projected as a supplementary variable. This
+gives a single space defined by the overall response structure, without the
+multi-table normalisation. If the MFA compromise and the pooled MCA produce
+similar category configurations, the results are robust to the choice of method.
+
+```{r}
+#| label: pooled-mca
+#| cache: true
+
+mca_results <- list()
+for (cc in countries) {
+  cd <- df %>%
+    filter(cntry == cc) %>%
+    filter(if_all(all_of(active_vars), ~ !is.na(.)))
+
+  # Prepare: active vars as factors, round as supplementary
+  mca_data <- cd %>%
+    mutate(across(all_of(active_vars), factor),
+           essround = factor(essround))
+
+  # Also add supplementary sociodemographic variables
+  for (v in sup_vars_socdem) {
+    mca_data[[v]] <- factor(mca_data[[v]])
+  }
+  if ("lca_class" %in% names(mca_data)) {
+    mca_data$lca_class <- factor(mca_data$lca_class)
+  }
+
+  sup_cols <- c("essround", sup_vars_socdem)
+  if ("lca_class" %in% names(mca_data)) sup_cols <- c(sup_cols, "lca_class")
+
+  mca_input <- mca_data %>% select(all_of(active_vars), all_of(sup_cols))
+
+  cat("Pooled MCA for", country_labels[cc], ": n =", nrow(mca_input), "\n")
+
+  mca_results[[cc]] <- MCA(mca_input,
+                            quali.sup = which(names(mca_input) %in% sup_cols),
+                            ncp = 5,
+                            graph = FALSE)
+}
+```
+
+```{r}
+#| label: pooled-mca-scree
+#| fig-width: 10
+#| fig-height: 8
+
+mca_eig_plots <- list()
+for (cc in countries) {
+  eig <- mca_results[[cc]]$eig
+  eig_df <- tibble(dim = 1:nrow(eig), pct = eig[, 2], cum = eig[, 3])
+
+  mca_eig_plots[[cc]] <- ggplot(eig_df %>% filter(dim <= 10),
+                                 aes(dim, pct)) +
+    geom_col(fill = plasma_pal(10)[6], width = 0.7) +
+    geom_line(aes(y = cum), colour = "grey40", linewidth = 0.6) +
+    geom_point(aes(y = cum), colour = "grey40", size = 1.5) +
+    scale_x_continuous(breaks = 1:10) +
+    labs(title = country_labels[cc], x = "Dimension", y = "% inertia") +
+    theme(plot.title = element_text(face = "bold", size = 11))
+}
+
+(mca_eig_plots[["PT"]] + mca_eig_plots[["ES"]]) /
+(mca_eig_plots[["GR"]] + mca_eig_plots[["IT"]]) +
+  plot_annotation(title = "Pooled MCA Scree Plots (All Rounds Stacked)")
+```
+
+```{r}
+#| label: pooled-mca-category-maps
+#| fig-width: 12
+#| fig-height: 10
+
+mca_cat_plots <- list()
+for (cc in countries) {
+  coord <- as.data.frame(mca_results[[cc]]$var$coord[, 1:2])
+  coord$category <- rownames(coord)
+  coord$variable <- sub("_.*$", "", coord$category)
+  coord$label <- sub("^[^_]+_", "", coord$category)
+
+  mca_cat_plots[[cc]] <- ggplot(coord, aes(`Dim 1`, `Dim 2`,
+                                            colour = variable, label = label)) +
+    geom_point(size = 2.5, alpha = 0.8) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    ggrepel::geom_text_repel(size = 3, max.overlaps = 20, show.legend = FALSE) +
+    scale_colour_viridis_d(option = "plasma", end = 0.85) +
+    labs(title = country_labels[cc],
+         x = paste0("Dim 1 (", round(mca_results[[cc]]$eig[1, 2], 1), "%)"),
+         y = paste0("Dim 2 (", round(mca_results[[cc]]$eig[2, 2], 1), "%)"),
+         colour = "Variable") +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          legend.position = "bottom")
+}
+
+(mca_cat_plots[["PT"]] + mca_cat_plots[["ES"]]) /
+(mca_cat_plots[["GR"]] + mca_cat_plots[["IT"]]) +
+  plot_annotation(title = "Pooled MCA: Category Configurations (Dim 1 x 2)")
+```
+
+```{r}
+#| label: pooled-mca-supplementary
+
+# Supplementary variable coordinates (including round)
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Supplementary barycentres (Dim 1-2) ===\n")
+  print(round(mca_results[[cc]]$quali.sup$coord[, 1:2], 3))
+}
+```
+
+
+# Save Workspace {.unnumbered}
 
 ```{r}
 #| label: save-workspace
-#| echo: false
+#| cache: false
 
-save.image("saved/analysis.Rdata")
+# Save all results for downstream consumer documents
+save(
+  df, mfa_results, mfa_inputs, mca_results,
+  lca_models, lca_selected, lca_fits, selected_k,
+  active_vars, participation_vars, sup_vars_socdem, sup_all,
+  countries, country_labels,
+  file = "saved/analysis.Rdata"
+)
+
+cat("Workspace saved to saved/analysis.Rdata\n")
+cat("Objects:", paste(ls(), collapse = ", "), "\n")
 ```

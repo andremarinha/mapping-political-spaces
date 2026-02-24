@@ -140,9 +140,10 @@ Immigration 3-category scheme: 0–3/4–6/7–10 split maximises balance (no ce
 
 ## Analytical Method
 - **Country-specific** analyses (no forced cross-national equivalence)
-- **Multi-table GDA**: MFA / STATIS logic — each ESS round is a separate block
-- Compromise space captures common structure; partial representations capture round deviations
-- Supplementary projections: Oesch classes and parties as barycentres
+- **Pooled MCA** (primary): All rounds stacked, `essround` as supplementary. Produces interpretable category configurations with clear dimensionality after Benzécri correction.
+- **MFA** (robustness): Each ESS round as a separate block. Produces flat eigenvalue structure due to repeated cross-section design (block-diagonal indicator matrix, no individual overlap between groups). Kept for methodological comparison.
+- **Benzécri correction**: Modified eigenvalues = ((J/(J−1)) × (λ − 1/J))² for λ > 1/J. With J=5 active variables, threshold = 0.2. Retains 6 of 14 dimensions. First two modified dimensions capture 95–98% of modified inertia across all four countries.
+- Supplementary projections: Oesch classes, income, education, urbanisation, LCA repertoires, and parties as barycentres
 
 ## Weighting
 `analysis_weight = pspwght * pweight * 10000` — the 10k factor produces readable weighted counts. ESS changed weighting variables at Round 9 (`anweight`); hybrid strategy handles this.
@@ -239,3 +240,14 @@ All session logs are stored in `log/session_YYYY-MM-DD.md`. Always consult the m
 - Decided LCA indicator set: 6 existing participation dummies (R1–11 coverage), not adding wrkorg/wrkprty (which would restrict to R1–9).
 - **Project state**: Data engineering complete. All variables for MFA active set and supplementary projections ready (except party vote harmonisation, deferred). Ready to begin LCA-MFA analysis.
 - **Next**: Implement LCA-MFA analysis in `1_analysis.qmd`.
+
+### 2026-02-24 — LCA-MFA Implementation + Benzécri Correction
+- Wrote complete `1_analysis.qmd` with LCA (poLCA, K=2–6, per country), MFA (wide format, per country), and pooled MCA (robustness).
+- Harmonised income quintiles: added `income_quint_h` (empirical ntile from `hinctnt_harmonised`, R1–11, 63.5% coverage).
+- Key finding: MFA produces flat eigenvalue structure (~2.7% per dim) due to repeated cross-section design. Pooled MCA much more interpretable (Dim 1 ~15–17%, Dim 2 ~12–14%).
+- Implemented **Benzécri correction** for pooled MCA: `benzecri_correction()` helper function, modified eigenvalue tables, modified-rate scree plots, summary comparison.
+- Results: 6 of 14 eigenvalues above 1/J threshold; modified rates — Dim 1: 69–74%, Dim 2: 24–29%, cumulative 2-dim: 95–98% across all countries.
+- Category map axis labels updated to show modified rates.
+- Master dimensions: 67,358 × 1,702.
+- **Project state**: Analysis QMD complete with LCA, MFA, pooled MCA + Benzécri correction. Full QMD not yet rendered. Data pipeline 01–08 functional.
+- **Next**: Render full QMD; interpret dimensions substantively; label LCA classes; add diachronic trajectories; decide primary method (pooled MCA recommended).

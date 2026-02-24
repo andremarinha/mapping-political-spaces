@@ -38,6 +38,31 @@ theme_set(theme_minimal(base_size = 12))
 # Colour palette (project standard)
 plasma_pal <- viridis::plasma
 
+# Benzécri correction for MCA eigenvalues
+# In standard MCA, eigenvalues are deflated by disjunctive coding.
+# The correction retains only eigenvalues > 1/J (where J = number of active
+# variables) and computes: modified_λ = ((J/(J-1)) * (λ - 1/J))²
+# Modified rates = modified_λ / Σ(modified_λ) × 100
+benzecri_correction <- function(eig_table, J) {
+  eig_raw <- eig_table[, 1]
+  threshold <- 1 / J
+
+  mask <- eig_raw > threshold
+  eig_kept <- eig_raw[mask]
+
+  modified <- ((J / (J - 1)) * (eig_kept - threshold))^2
+  mod_pct  <- 100 * modified / sum(modified)
+  mod_cum  <- cumsum(mod_pct)
+
+  data.frame(
+    dimension          = seq_along(modified),
+    raw_eigenvalue     = eig_kept,
+    modified_eigenvalue = modified,
+    modified_pct       = mod_pct,
+    cumulative_pct     = mod_cum
+  )
+}
+
 # Load master dataset
 df <- readRDS("data/master/ess_final.rds")
 
@@ -465,7 +490,7 @@ configurations, not individual-level correlations.
 #| fig-width: 10
 #| fig-height: 8
 
-# Scree plots with Benzécri correction
+# Scree plots — raw MFA eigenvalues
 eig_plots <- list()
 for (cc in countries) {
   eig <- mfa_results[[cc]]$eig
@@ -759,7 +784,82 @@ for (cc in countries) {
 
 (mca_eig_plots[["PT"]] + mca_eig_plots[["ES"]]) /
 (mca_eig_plots[["GR"]] + mca_eig_plots[["IT"]]) +
-  plot_annotation(title = "Pooled MCA Scree Plots (All Rounds Stacked)")
+  plot_annotation(title = "Pooled MCA Scree Plots — Raw Rates (All Rounds Stacked)")
+```
+
+### Modified Eigenvalues (Benzécri Correction)
+
+In standard MCA, eigenvalues are deflated by the disjunctive (indicator) coding:
+total inertia = Q/J − 1, where Q is the total number of categories and J the
+number of active variables. The Benzécri correction retains only eigenvalues
+above the threshold 1/J and re-expresses them as **modified rates** that better
+reflect the true dimensionality of the data. These modified rates are **not**
+explained variance (interpretation constraint 5 in CLAUDE.md), but they provide
+a more meaningful basis for deciding how many dimensions to retain than the
+raw MCA percentages.
+
+With J = `r length(active_vars)` active variables, the threshold is
+1/J = `r round(1/length(active_vars), 2)`.
+
+```{r}
+#| label: pooled-mca-benzecri-tables
+
+J <- length(active_vars)
+
+mca_benzecri <- list()
+for (cc in countries) {
+  mca_benzecri[[cc]] <- benzecri_correction(mca_results[[cc]]$eig, J)
+  cat("\n===", country_labels[cc], "===\n")
+  cat("Eigenvalues above 1/J:", nrow(mca_benzecri[[cc]]), "of",
+      nrow(mca_results[[cc]]$eig), "\n")
+  print(round(mca_benzecri[[cc]], 4))
+}
+```
+
+```{r}
+#| label: pooled-mca-benzecri-scree
+#| fig-width: 10
+#| fig-height: 8
+
+mca_mod_plots <- list()
+for (cc in countries) {
+  bz <- mca_benzecri[[cc]]
+
+  mca_mod_plots[[cc]] <- ggplot(bz, aes(dimension, modified_pct)) +
+    geom_col(fill = plasma_pal(10)[6], width = 0.7) +
+    geom_line(aes(y = cumulative_pct), colour = "grey40", linewidth = 0.6) +
+    geom_point(aes(y = cumulative_pct), colour = "grey40", size = 1.5) +
+    scale_x_continuous(breaks = bz$dimension) +
+    scale_y_continuous(limits = c(0, 100)) +
+    labs(title = country_labels[cc],
+         x = "Dimension", y = "Modified rate (%)") +
+    theme(plot.title = element_text(face = "bold", size = 11))
+}
+
+(mca_mod_plots[["PT"]] + mca_mod_plots[["ES"]]) /
+(mca_mod_plots[["GR"]] + mca_mod_plots[["IT"]]) +
+  plot_annotation(
+    title = "Pooled MCA Scree Plots — Benzécri Modified Rates",
+    subtitle = "Bars = modified rate per dimension | Line = cumulative %"
+  )
+```
+
+```{r}
+#| label: pooled-mca-benzecri-summary
+
+# Summary comparison: raw vs modified rates for first 2 dimensions
+cat("=== Raw vs Modified Rates (Dim 1 & 2) ===\n\n")
+for (cc in countries) {
+  bz <- mca_benzecri[[cc]]
+  raw <- mca_results[[cc]]$eig
+  cat(country_labels[cc], ":\n")
+  cat("  Dim 1: raw =", round(raw[1, 2], 1), "% → modified =",
+      round(bz$modified_pct[1], 1), "%\n")
+  cat("  Dim 2: raw =", round(raw[2, 2], 1), "% → modified =",
+      round(bz$modified_pct[2], 1), "%\n")
+  cat("  Cumulative (2 dims): raw =", round(raw[2, 3], 1),
+      "% → modified =", round(bz$cumulative_pct[2], 1), "%\n\n")
+}
 ```
 
 ```{r}
@@ -774,6 +874,9 @@ for (cc in countries) {
   coord$variable <- sub("_.*$", "", coord$category)
   coord$label <- sub("^[^_]+_", "", coord$category)
 
+  # Use Benzécri-corrected rates in axis labels
+  bz <- mca_benzecri[[cc]]
+
   mca_cat_plots[[cc]] <- ggplot(coord, aes(`Dim 1`, `Dim 2`,
                                             colour = variable, label = label)) +
     geom_point(size = 2.5, alpha = 0.8) +
@@ -782,8 +885,8 @@ for (cc in countries) {
     ggrepel::geom_text_repel(size = 3, max.overlaps = 20, show.legend = FALSE) +
     scale_colour_viridis_d(option = "plasma", end = 0.85) +
     labs(title = country_labels[cc],
-         x = paste0("Dim 1 (", round(mca_results[[cc]]$eig[1, 2], 1), "%)"),
-         y = paste0("Dim 2 (", round(mca_results[[cc]]$eig[2, 2], 1), "%)"),
+         x = paste0("Dim 1 (", round(bz$modified_pct[1], 1), "%)"),
+         y = paste0("Dim 2 (", round(bz$modified_pct[2], 1), "%)"),
          colour = "Variable") +
     theme(plot.title = element_text(face = "bold", size = 11),
           legend.position = "bottom")

@@ -1,0 +1,88 @@
+=== 08_mfa_preparation.R ===
+Timestamp: 2026-02-23 17:57:00 
+
+Input dimensions: 67358 x 1696 
+
+--- imbgeco_3cat (Immigration: economy) ---
+Original imbgeco (substantive 0-10):
+
+    0     1     2     3     4     5     6     7     8     9    10 
+ 4398  2868  5224  6512  5898 14104  7172  7568  6175  1884  2407 
+Recoded imbgeco_3cat:
+
+    1     2     3  <NA> 
+19002 27174 18034  3148 
+
+--- imueclt_3cat (Immigration: culture) ---
+Original imueclt (substantive 0-10):
+
+    0     1     2     3     4     5     6     7     8     9    10 
+ 3709  2662  4515  6080  5554 13212  7283  7944  7148  2507  3412 
+Recoded imueclt_3cat:
+
+    1     2     3  <NA> 
+16966 26049 21011  3332 
+
+--- imwbcnt_3cat (Immigration: overall) ---
+Original imwbcnt (substantive 0-10):
+
+    0     1     2     3     4     5     6     7     8     9    10 
+ 4485  3434  5910  7702  7118 17706  6110  5301  3952  1339  1606 
+Recoded imwbcnt_3cat:
+
+    1     2     3  <NA> 
+21531 30934 12198  2695 
+
+--- income_quint ---
+Original hinctnta (substantive 1-10):
+
+   1    2    3    4    5    6    7    8    9   10 
+2602 3999 4474 4462 3951 3432 3212 2619 1951 1460 
+Recoded income_quint:
+
+    1     2     3     4     5  <NA> 
+ 6601  8936  7383  5831  3411 35196 
+Missingness by round:
+    1     2     3     4     5     6     7     8     9    10    11 
+100.0 100.0 100.0  44.2  50.2  36.2  18.3  28.3  33.8  37.0  32.6 
+
+--- eisced_5cat ---
+Original eisced (substantive 1-7):
+
+    1     2     3     4     5     6     7 
+15072 11046  2491 11454  3001  4799  5487 
+Recoded eisced_5cat:
+
+    1     2     3     4     5  <NA> 
+15072 11046 13945  3001 10286 14008 
+Valid by round:
+   1    2    3    4    5    6    7    8    9   10   11 
+1663 1573 1809 4780 6590 4865 3101 5653 5293 9336 8687 
+
+=== DIAGNOSTIC SUMMARY ===
+
+MFA active variables: freehms_r, gincdif_r, imbgeco_3cat, imueclt_3cat, imwbcnt_3cat 
+Complete cases on all 5 active vars: 59333 / 67358 ( 88.1 %)
+By country:
+
+   ES    GR    IT    PT 
+18365 13780 11551 15637 
+By round:
+
+   1    2    3    4    5    6    7    8    9   10   11 
+5520 5202 3259 5873 5858 4293 2731 5071 4749 8705 8072 
+
+Supplementary variable coverage (non-NA):
+  oesch8              :  57460 / 67358 ( 85.3%)
+  domicil_r           :  67129 / 67358 ( 99.7%)
+  income_quint        :  32162 / 67358 ( 47.7%)
+  eisced_5cat         :  53350 / 67358 ( 79.2%)
+  mother_edu_5cat     :  59957 / 67358 ( 89.0%)
+  father_edu_5cat     :  61257 / 67358 ( 90.9%)
+
+Archived previous master to: data/archive/ess_final_pre08_20260223_175705.rds 
+
+Output dimensions: 67358 x 1701 
+New columns: imbgeco_3cat, imueclt_3cat, imwbcnt_3cat, income_quint, eisced_5cat
+
+=== Done ===

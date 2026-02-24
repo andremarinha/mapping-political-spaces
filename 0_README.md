@@ -115,9 +115,9 @@ The dataset is built via **8 sequential R scripts** located in `scripts/`. They 
 | 05 | `05_descriptives.R` | Audit and visualise | Generates coverage heatmaps and class distribution plots. Applies Plasma palette standards. | `figures/*.png`, `figures/*.pdf` |
 | 06 | `06_participation.R` | Recode participation dummies | Recodes 6 political participation items as dummies (0/1). Harmonises `pbldmn`/`pbldmna` across rounds via `coalesce()`. Recodes `vote` 3 ("Not eligible") to NA. | `data/master/ess_final.rds` (updated) |
 | 07 | `07_attitudinal_recoding.R` | Recode attitudinal & structural variables | Reverses `freehms`, `gincdif`, `polintr` (Delespaul 2025). Recodes `rlgblg` to 0/1, `rlgatnd` to 3-cat, `domicil` to 4-cat. Harmonises parental education (`mother_edu_5cat`, `father_edu_5cat`) from two ESS coding systems via `coalesce()`. | `data/master/ess_final.rds` (updated) |
-| 08 | `08_mfa_preparation.R` | Recode MFA active & supplementary variables | Immigration 0–10 → 3 categories (`imbgeco_3cat`, `imueclt_3cat`, `imwbcnt_3cat`). Income deciles → quintiles (`income_quint`). Respondent education → 5 categories (`eisced_5cat`). | `data/master/ess_final.rds` (updated) |
+| 08 | `08_mfa_preparation.R` | Recode MFA active & supplementary variables | Immigration 0–10 → 3 categories (`imbgeco_3cat`, `imueclt_3cat`, `imwbcnt_3cat`). Income deciles → quintiles (`income_quint`; R4–11) + harmonised empirical quintiles (`income_quint_h`; R1–11 via `hinctnt_harmonised` + `ntile()`). Respondent education → 5 categories (`eisced_5cat`). | `data/master/ess_final.rds` (updated) |
 
-**Master dataset:** 67,358 rows × 1,701 columns (all original ESS variables + derived class, weight, participation, attitudinal, and MFA variables).
+**Master dataset:** 67,358 rows × 1,702 columns (all original ESS variables + derived class, weight, participation, attitudinal, and MFA variables).
 
 ### Weighting Strategy
 
@@ -503,7 +503,7 @@ mapping/
 | D21 | Parental education harmonised via `coalesce()`: ES-ISCED preferred over old ISCED where both available | Finer granularity of 7-cat ES-ISCED (R4–11) preferred; old 5-cat ISCED (R1–4) used as fallback |
 | D22 | `euftf` excluded from active MFA set | Missing in R1 and R5 would unbalance round blocks; 5 active variables (all R1–11) preferred over 6 with gaps |
 | D23 | Immigration 0–10 → 3 categories: 0–3 (Negative) / 4–6 (Ambivalent) / 7–10 (Positive) | Maximises balance (no cell < 18%); aligns with substantive negative/ambivalent/positive interpretation |
-| D24 | Income (`hinctnta`) decile pairs → quintiles; supplementary only | Absent R1–3, 52% overall missingness; as supplementary, does not affect axis construction |
+| D24 | Income quintiles: two versions kept — `income_quint` (decile pairs from `hinctnta`, R4–11, 47.7%) and `income_quint_h` (empirical `ntile()` from `hinctnt_harmonised`, R1–11, 63.5%); supplementary only | `income_quint` = clean decile-pair mapping; `income_quint_h` extends coverage to R1–3 via `hinctnt` (12 country-specific brackets) harmonised with `hinctnta` (10 deciles) in script 02 |
 | D25 | Respondent education (`eisced`) → 5 categories matching parental scheme | Ensures comparability across respondent and parental education variables |
 
 ---

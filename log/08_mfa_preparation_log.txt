@@ -1,7 +1,7 @@
 === 08_mfa_preparation.R ===
-Timestamp: 2026-02-23 17:57:00 
+Timestamp: 2026-02-24 12:48:15 
 
-Input dimensions: 67358 x 1696 
+Input dimensions: 67358 x 1701 
 
 --- imbgeco_3cat (Immigration: economy) ---
 Original imbgeco (substantive 0-10):
@@ -46,6 +46,18 @@ Missingness by round:
     1     2     3     4     5     6     7     8     9    10    11 
 100.0 100.0 100.0  44.2  50.2  36.2  18.3  28.3  33.8  37.0  32.6 
 
+--- income_quint_h (harmonised, empirical quintiles) ---
+Recoded income_quint_h:
+
+    1     2     3     4     5  <NA> 
+ 8569  8561  8556  8550  8540 24582 
+Coverage: income_quint (hinctnta only) vs income_quint_h (harmonised):
+  income_quint   : 32162 / 67358 (47.7%)
+  income_quint_h : 42776 / 67358 (63.5%)
+Missingness by round (income_quint_h):
+   1    2    3    4    5    6    7    8    9   10   11 
+34.0 36.4 42.1 44.2 50.2 36.2 18.3 28.3 33.8 37.0 32.6 
+
 --- eisced_5cat ---
 Original eisced (substantive 1-7):
 
@@ -76,13 +88,14 @@ Supplementary variable coverage (non-NA):
   oesch8              :  57460 / 67358 ( 85.3%)
   domicil_r           :  67129 / 67358 ( 99.7%)
   income_quint        :  32162 / 67358 ( 47.7%)
+  income_quint_h      :  42776 / 67358 ( 63.5%)
   eisced_5cat         :  53350 / 67358 ( 79.2%)
   mother_edu_5cat     :  59957 / 67358 ( 89.0%)
   father_edu_5cat     :  61257 / 67358 ( 90.9%)
 
-Archived previous master to: data/archive/ess_final_pre08_20260223_175705.rds 
+Archived previous master to: data/archive/ess_final_pre08_20260224_124835.rds 
 
-Output dimensions: 67358 x 1701 
-New columns: imbgeco_3cat, imueclt_3cat, imwbcnt_3cat, income_quint, eisced_5cat
+Output dimensions: 67358 x 1702 
+New columns: imbgeco_3cat, imueclt_3cat, imwbcnt_3cat, income_quint, income_quint_h, eisced_5cat
 
 === Done ===

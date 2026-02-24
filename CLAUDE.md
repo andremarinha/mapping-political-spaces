@@ -76,7 +76,7 @@ mapping/
 ```
 
 ## Data Pipeline
-Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_class_coding.R` → `04_final_merge.R` → `05_descriptives.R` → `06_participation.R` → `07_attitudinal_recoding.R` → `08_mfa_preparation.R`. Master output: `data/master/ess_final.rds` (67,358 × 1,701 — ALL original ESS variables + derived class/weight/participation/attitudinal/MFA variables).
+Scripts **must run in order**: `01_cleaning.R` → `02_weighting.R` → `03_class_coding.R` → `04_final_merge.R` → `05_descriptives.R` → `06_participation.R` → `07_attitudinal_recoding.R` → `08_mfa_preparation.R`. Master output: `data/master/ess_final.rds` (67,358 × 1,702 — ALL original ESS variables + derived class/weight/participation/attitudinal/MFA variables).
 
 **Note:** Script 04 was updated (2026-02-14) to retain ALL original ESS columns. Previous version archived at `legacy/archive/04_final_merge_v1.R`.
 
@@ -121,15 +121,16 @@ Reversal logic follows Delespaul (2025). Parental education harmonised across tw
 | `imueclt_3cat` | `imueclt` (0–10) | 1=Negative (0–3), 2=Ambivalent (4–6), 3=Positive (7–10) | 1–11 | 95.1% |
 | `imwbcnt_3cat` | `imwbcnt` (0–10) | 1=Negative (0–3), 2=Ambivalent (4–6), 3=Positive (7–10) | 1–11 | 96.0% |
 | `income_quint` | `hinctnta` (1–10) | Decile pairs → quintiles (1=Q1 lowest...5=Q5 highest) | 4–11 | 47.7% |
+| `income_quint_h` | `hinctnt_harmonised` | Empirical `ntile()` quintiles within country×round | 1–11 | 63.5% |
 | `eisced_5cat` | `eisced` (1–7) | 5-cat ISCED matching parental scheme | 1–11 | 79.2% |
 
-Immigration 3-category scheme: 0–3/4–6/7–10 split maximises balance (no cell < 18%) and aligns with negative/ambivalent/positive interpretation. Income quintiles supplementary only (absent R1–3, high missingness). Respondent education matches parental education 5-category scheme. `euftf` excluded from active MFA set: missing in R1 and R5 would unbalance round blocks (Decision D22).
+Immigration 3-category scheme: 0–3/4–6/7–10 split maximises balance (no cell < 18%) and aligns with negative/ambivalent/positive interpretation. Two income quintile variables: `income_quint` uses clean decile-pair mapping from `hinctnta` (R4–11 only); `income_quint_h` uses empirical `ntile()` on `hinctnt_harmonised` (coalesce of `hinctnt` R1–3 + `hinctnta` R4+), extending coverage from 47.7% to 63.5%. Respondent education matches parental education 5-category scheme. `euftf` excluded from active MFA set: missing in R1 and R5 would unbalance round blocks (Decision D22).
 
 ### MFA Variable Architecture
 | Role | Variables | Notes |
 |------|-----------|-------|
 | **Active** (political space) | `freehms_r`, `gincdif_r`, `imbgeco_3cat`, `imueclt_3cat`, `imwbcnt_3cat` | All R1–11; 88.1% complete cases (59,333/67,358) |
-| **Supplementary** (sociodemographic) | `oesch8`, `domicil_r`, `income_quint`, `eisced_5cat`, `mother_edu_5cat`, `father_edu_5cat` | Coverage varies (47.7–99.7%) |
+| **Supplementary** (sociodemographic) | `oesch8`, `domicil_r`, `income_quint`/`income_quint_h`, `eisced_5cat`, `mother_edu_5cat`, `father_edu_5cat` | Coverage varies (47.7–99.7%) |
 | **Supplementary** (party vote) | Country-specific party variables | Harmonisation deferred |
 | **Supplementary** (participation) | LCA-derived repertoire classes | LCA not yet run |
 
@@ -234,7 +235,7 @@ All session logs are stored in `log/session_YYYY-MM-DD.md`. Always consult the m
 - Respondent education → 5 categories (`eisced_5cat`): 79.2% coverage, matches parental scheme.
 - Decided: `euftf` excluded from active MFA set (missing R1 + R5 would unbalance round blocks) — D22.
 - MFA active variables finalised: 5 attitudinal (all R1–11), 88.1% complete cases (59,333/67,358).
-- Master dimensions: 67,358 × 1,701 (1,696 + 5 new columns).
+- Master dimensions: 67,358 × 1,702 (1,696 + 5 new columns).
 - Decided LCA indicator set: 6 existing participation dummies (R1–11 coverage), not adding wrkorg/wrkprty (which would restrict to R1–9).
 - **Project state**: Data engineering complete. All variables for MFA active set and supplementary projections ready (except party vote harmonisation, deferred). Ready to begin LCA-MFA analysis.
 - **Next**: Implement LCA-MFA analysis in `1_analysis.qmd`.

@@ -10,16 +10,22 @@
 #   imbgeco_3cat  — Immigration (economy): 1=Negative, 2=Ambivalent, 3=Positive
 #   imueclt_3cat  — Immigration (culture): 1=Negative, 2=Ambivalent, 3=Positive
 #   imwbcnt_3cat  — Immigration (overall): 1=Negative, 2=Ambivalent, 3=Positive
-#   income_quint  — Household income quintiles (1=Q1 lowest ... 5=Q5 highest)
+#   income_quint  — Household income quintiles from hinctnta only (R4-11)
+#   income_quint_h — Household income quintiles from hinctnt_harmonised (R1-11)
 #   eisced_5cat   — Respondent education, 5-category ISCED
 #
 # Design decisions:
 #   - Immigration 0-10 scales categorised into 3 groups (0-3 / 4-6 / 7-10).
 #     Three categories maximise balance (no cell < 18%) and have clear
 #     substantive meaning: negative, ambivalent, positive orientation.
-#   - Income deciles (hinctnta 1-10) recoded to quintiles by merging pairs.
-#     Note: hinctnta is completely absent in Rounds 1-3 and has high
-#     missingness in R4+ (40-60% by country). As supplementary in MFA,
+#   - Income deciles (hinctnta 1-10) recoded to quintiles by merging pairs
+#     (income_quint). Note: hinctnta is completely absent in Rounds 1-3.
+#   - Harmonised income quintiles (income_quint_h) use hinctnt_harmonised
+#     (created in script 02 via coalesce of hinctnt R1-3 + hinctnta R4+)
+#     with empirical ntile() within each country x round. This extends
+#     coverage from 47.7% to 63.5% by including R1-3 data.
+#     Both kept: income_quint = clean decile-pair mapping; income_quint_h =
+#     empirical quintiles from harmonised source. As supplementary in MFA,
 #     missing cases do not affect axis construction.
 #   - Respondent education (eisced 0-7) recoded to 5 categories matching
 #     the parental education harmonisation scheme (mother_edu_5cat,
@@ -110,6 +116,43 @@ cat("Missingness by round:\n")
 print(tapply(is.na(df$income_quint), df$essround, function(x) round(mean(x)*100, 1)))
 
 # ==============================================================================
+# 2b. Income — harmonised empirical quintiles (R1-11)
+# ==============================================================================
+# Uses hinctnt_harmonised (from script 02: coalesce of hinctnt R1-3 + hinctnta R4+).
+# hinctnt (R1-3) uses 12 country-specific income brackets (1-12).
+# hinctnta (R4+) uses 10 harmonised income deciles (1-10).
+# Both are ordinal low-to-high, with similar cumulative distributions.
+# Empirical ntile() within each country x round handles the different scales
+# transparently: each respondent is ranked within their country-round group
+# and assigned to Q1-Q5 based on their relative position.
+# ESS missing codes (77, 88, 99) are excluded before ranking.
+
+cat("\n--- income_quint_h (harmonised, empirical quintiles) ---\n")
+df <- df %>%
+  mutate(
+    # Clean: strip ESS missing codes from hinctnt_harmonised
+    .inc_clean = ifelse(hinctnt_harmonised %in% c(77, 88, 99), NA, hinctnt_harmonised)
+  ) %>%
+  group_by(cntry, essround) %>%
+  mutate(
+    income_quint_h = ifelse(is.na(.inc_clean), NA_integer_, as.integer(ntile(.inc_clean, 5)))
+  ) %>%
+  ungroup() %>%
+  select(-`.inc_clean`)
+
+cat("Recoded income_quint_h:\n")
+print(table(df$income_quint_h, useNA = "ifany"))
+cat("Coverage: income_quint (hinctnta only) vs income_quint_h (harmonised):\n")
+cat(sprintf("  income_quint   : %d / %d (%.1f%%)\n",
+            sum(!is.na(df$income_quint)), nrow(df),
+            100 * mean(!is.na(df$income_quint))))
+cat(sprintf("  income_quint_h : %d / %d (%.1f%%)\n",
+            sum(!is.na(df$income_quint_h)), nrow(df),
+            100 * mean(!is.na(df$income_quint_h))))
+cat("Missingness by round (income_quint_h):\n")
+print(tapply(is.na(df$income_quint_h), df$essround, function(x) round(mean(x)*100, 1)))
+
+# ==============================================================================
 # 3. Respondent education — eisced 0-7 → 5 categories
 # ==============================================================================
 # ESS eisced: 0 = not harmonisable, 1-7 = ES-ISCED categories
@@ -158,8 +201,8 @@ print(table(df_active_complete$essround))
 
 # Supplementary variables: coverage
 cat("\nSupplementary variable coverage (non-NA):\n")
-sup_vars <- c("oesch8", "domicil_r", "income_quint", "eisced_5cat",
-              "mother_edu_5cat", "father_edu_5cat")
+sup_vars <- c("oesch8", "domicil_r", "income_quint", "income_quint_h",
+              "eisced_5cat", "mother_edu_5cat", "father_edu_5cat")
 for (v in sup_vars) {
   n_valid <- sum(!is.na(df[[v]]))
   pct <- round(100 * n_valid / nrow(df), 1)
@@ -180,6 +223,6 @@ if (file.exists(output_path)) {
 
 saveRDS(df, output_path)
 cat("\nOutput dimensions:", nrow(df), "x", ncol(df), "\n")
-cat("New columns: imbgeco_3cat, imueclt_3cat, imwbcnt_3cat, income_quint, eisced_5cat\n")
+cat("New columns: imbgeco_3cat, imueclt_3cat, imwbcnt_3cat, income_quint, income_quint_h, eisced_5cat\n")
 cat("\n=== Done ===\n")
 sink()

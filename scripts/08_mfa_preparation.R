@@ -12,7 +12,8 @@
 #   imwbcnt_3cat  — Immigration (overall): 1=Negative, 2=Ambivalent, 3=Positive
 #   income_quint  — Household income quintiles from hinctnta only (R4-11)
 #   income_quint_h — Household income quintiles from hinctnt_harmonised (R1-11)
-#   eisced_5cat   — Respondent education, 5-category ISCED
+#   eisced_5cat   — Respondent education, 5-category ISCED (eisced only)
+#   eisced_5cat_h — Respondent education, harmonised (eisced + edulvla via coalesce)
 #
 # Design decisions:
 #   - Immigration 0-10 scales categorised into 3 groups (0-3 / 4-6 / 7-10).
@@ -29,8 +30,12 @@
 #     missing cases do not affect axis construction.
 #   - Respondent education (eisced 0-7) recoded to 5 categories matching
 #     the parental education harmonisation scheme (mother_edu_5cat,
-#     father_edu_5cat). Note: low coverage in Rounds 1-3 (ES-ISCED
-#     introduced later).
+#     father_edu_5cat). Note: eisced = 0 ("not possible to harmonise")
+#     in early rounds for PT (R1-3), GR (R1-2, R4), IT (R1).
+#   - Harmonised respondent education (eisced_5cat_h) uses coalesce()
+#     of eisced_5cat and edulvla (R1-4, 5-category ISCED, same scale).
+#     Cross-validation on R4 (ES, PT) shows 1:1 mapping (100% for cats 1-4,
+#     96.6% for cat 5). Recovers 13,701 respondents from early rounds.
 #   - euftf (EU integration) excluded from active MFA variables: missing
 #     in Rounds 1 and 5 would unbalance round blocks (Decision D22).
 #   - ESS missing codes (77, 88, 99) mapped to NA throughout.
@@ -184,6 +189,49 @@ cat("Valid by round:\n")
 print(tapply(!is.na(df$eisced_5cat), df$essround, sum))
 
 # ==============================================================================
+# 3b. Harmonised respondent education — eisced + edulvla via coalesce
+# ==============================================================================
+# Problem: eisced = 0 ("not possible to harmonise into ES-ISCED") for
+#   PT R1-3 (5,632 obs), GR R1-2+R4 (6,893 obs), IT R1 (1,193 obs).
+#   Spain's ESS team harmonised all rounds, so ES has no eisced = 0.
+# Solution: edulvla (Highest level of education, R1-4) has values 1-5
+#   on the same 5-category ISCED scale. Cross-validation on R4 (where
+#   both exist for ES and PT, n=9,825) shows a 1-to-1 mapping:
+#     edulvla 1 → eisced_5cat 1 (100%)
+#     edulvla 2 → eisced_5cat 2 (100%)
+#     edulvla 3 → eisced_5cat 3 (100%)
+#     edulvla 4 → eisced_5cat 4 (100%)
+#     edulvla 5 → eisced_5cat 5 (96.6%, 3.4% to cat 4)
+# Strategy: coalesce(eisced_5cat, edulvla_cleaned) — prefer eisced_5cat
+# where available, fall back to edulvla for early rounds.
+
+cat("\n--- eisced_5cat_h (harmonised: eisced + edulvla) ---\n")
+df <- df %>%
+  mutate(
+    # Clean edulvla: strip ESS missing codes, keep 1-5
+    .edulvla_clean = case_when(
+      edulvla %in% 1:5 ~ as.integer(edulvla),
+      TRUE              ~ NA_integer_
+    ),
+    # Harmonise: prefer eisced_5cat, fall back to edulvla
+    eisced_5cat_h = coalesce(eisced_5cat, .edulvla_clean)
+  ) %>%
+  select(-.edulvla_clean)
+
+cat("Recoded eisced_5cat_h:\n")
+print(table(df$eisced_5cat_h, useNA = "ifany"))
+cat("Coverage comparison:\n")
+cat(sprintf("  eisced_5cat   : %d / %d (%.1f%%)\n",
+            sum(!is.na(df$eisced_5cat)), nrow(df),
+            100 * mean(!is.na(df$eisced_5cat))))
+cat(sprintf("  eisced_5cat_h : %d / %d (%.1f%%)\n",
+            sum(!is.na(df$eisced_5cat_h)), nrow(df),
+            100 * mean(!is.na(df$eisced_5cat_h))))
+cat("Recovered respondents:", sum(!is.na(df$eisced_5cat_h)) - sum(!is.na(df$eisced_5cat)), "\n")
+cat("Valid by round (eisced_5cat_h):\n")
+print(tapply(!is.na(df$eisced_5cat_h), df$essround, sum))
+
+# ==============================================================================
 # 4. Diagnostic summary
 # ==============================================================================
 cat("\n=== DIAGNOSTIC SUMMARY ===\n\n")
@@ -202,7 +250,7 @@ print(table(df_active_complete$essround))
 # Supplementary variables: coverage
 cat("\nSupplementary variable coverage (non-NA):\n")
 sup_vars <- c("oesch8", "domicil_r", "income_quint", "income_quint_h",
-              "eisced_5cat", "mother_edu_5cat", "father_edu_5cat")
+              "eisced_5cat", "eisced_5cat_h", "mother_edu_5cat", "father_edu_5cat")
 for (v in sup_vars) {
   n_valid <- sum(!is.na(df[[v]]))
   pct <- round(100 * n_valid / nrow(df), 1)
@@ -223,6 +271,6 @@ if (file.exists(output_path)) {
 
 saveRDS(df, output_path)
 cat("\nOutput dimensions:", nrow(df), "x", ncol(df), "\n")
-cat("New columns: imbgeco_3cat, imueclt_3cat, imwbcnt_3cat, income_quint, income_quint_h, eisced_5cat\n")
+cat("New columns: imbgeco_3cat, imueclt_3cat, imwbcnt_3cat, income_quint, income_quint_h, eisced_5cat, eisced_5cat_h\n")
 cat("\n=== Done ===\n")
 sink()

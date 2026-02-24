@@ -126,13 +126,21 @@ Reversal logic follows Delespaul (2025). Parental education harmonised across tw
 
 Immigration 3-category scheme: 0–3/4–6/7–10 split maximises balance (no cell < 18%) and aligns with negative/ambivalent/positive interpretation. Two income quintile variables: `income_quint` uses clean decile-pair mapping from `hinctnta` (R4–11 only); `income_quint_h` uses empirical `ntile()` on `hinctnt_harmonised` (coalesce of `hinctnt` R1–3 + `hinctnta` R4+), extending coverage from 47.7% to 63.5%. Respondent education matches parental education 5-category scheme. `euftf` excluded from active MFA set: missing in R1 and R5 would unbalance round blocks (Decision D22).
 
-### MFA Variable Architecture
+### Political Space Variable Architecture
 | Role | Variables | Notes |
 |------|-----------|-------|
-| **Active** (political space) | `freehms_r`, `gincdif_r`, `imbgeco_3cat`, `imueclt_3cat`, `imwbcnt_3cat` | All R1–11; 88.1% complete cases (59,333/67,358) |
+| **Active** (political attitudes) | `freehms_r`, `gincdif_r`, `imbgeco_3cat`, `imueclt_3cat`, `imwbcnt_3cat` | J=5, Q=19; 88.1% complete cases (59,333/67,358). Note: 3 of 5 are immigration items → Benzécri-corrected 2-dim solution partly reflects low variable count. |
 | **Supplementary** (sociodemographic) | `oesch8`, `domicil_r`, `income_quint`/`income_quint_h`, `eisced_5cat`, `mother_edu_5cat`, `father_edu_5cat` | Coverage varies (47.7–99.7%) |
-| **Supplementary** (party vote) | Country-specific party variables | Harmonisation deferred |
-| **Supplementary** (participation) | LCA-derived repertoire classes | LCA not yet run |
+| **Supplementary** (party vote) | Party families (CHES / Party Manifesto) | Harmonisation in progress |
+| **Supplementary** (participation) | LCA-derived repertoire classes | Implemented via poLCA |
+
+### Social Space Variable Architecture
+| Role | Variables | Notes |
+|------|-----------|-------|
+| **Active** (social position) | `oesch8` (8), `income_quint_h` (5), `eisced_5cat` (5), `mother_edu_5cat` (5), `father_edu_5cat` (5), `domicil_r` (4) | J=6, Q=32; 38.2% complete cases (25,706/67,358). Bottleneck: intersection of class coding, income, and education missingness. |
+| **Supplementary** (political behaviour) | `essround`, `vote_d`, `lca_class` | Vote/abstention + participation repertoires |
+| **Supplementary** (party vote) | Party families (CHES / Party Manifesto) | Harmonisation in progress |
+| **Robustness** | `income_quint` replaces `income_quint_h` | 34.3% complete cases; nearly identical eigenvalue structure |
 
 ## Coding Strategy (Frozen)
 - **Primary analysis**: Disjunctive (categorical/indicator) coding of all attitudinal variables
@@ -140,10 +148,14 @@ Immigration 3-category scheme: 0–3/4–6/7–10 split maximises balance (no ce
 
 ## Analytical Method
 - **Country-specific** analyses (no forced cross-national equivalence)
-- **Pooled MCA** (primary): All rounds stacked, `essround` as supplementary. Produces interpretable category configurations with clear dimensionality after Benzécri correction.
-- **MFA** (robustness): Each ESS round as a separate block. Produces flat eigenvalue structure due to repeated cross-section design (block-diagonal indicator matrix, no individual overlap between groups). Kept for methodological comparison.
-- **Benzécri correction**: Modified eigenvalues = ((J/(J−1)) × (λ − 1/J))² for λ > 1/J. With J=5 active variables, threshold = 0.2. Retains 6 of 14 dimensions. First two modified dimensions capture 95–98% of modified inertia across all four countries.
-- Supplementary projections: Oesch classes, income, education, urbanisation, LCA repertoires, and parties as barycentres
+- **Two spaces**: Political space (attitudinal MCA) + Social space (structural MCA)
+- **Pooled MCA** (primary): All rounds stacked, `essround` as supplementary. Interpretable category configurations with clear dimensionality after Benzécri correction.
+- **MFA** (robustness): Each ESS round as a separate block. Flat eigenvalue structure with repeated cross-sections. Kept for methodological comparison.
+- **Benzécri correction**: Modified eigenvalues = ((J/(J−1)) × (λ − 1/J))² for λ > 1/J.
+  - Political space: J=5, threshold=0.2. 2-dim solution (95–98% modified inertia).
+  - Social space: J=6, threshold=0.167. Dim 1 dominant (75–88%), 2-dim cumulative 91–96%.
+- **Political space supplementary**: Oesch classes, income, education, urbanisation, LCA repertoires, parties
+- **Social space supplementary**: Vote/abstention, LCA repertoires, ESS round, parties
 
 ## Weighting
 `analysis_weight = pspwght * pweight * 10000` — the 10k factor produces readable weighted counts. ESS changed weighting variables at Round 9 (`anweight`); hybrid strategy handles this.
@@ -250,4 +262,16 @@ All session logs are stored in `log/session_YYYY-MM-DD.md`. Always consult the m
 - Category map axis labels updated to show modified rates.
 - Master dimensions: 67,358 × 1,702.
 - **Project state**: Analysis QMD complete with LCA, MFA, pooled MCA + Benzécri correction. Full QMD not yet rendered. Data pipeline 01–08 functional.
-- **Next**: Render full QMD; interpret dimensions substantively; label LCA classes; add diachronic trajectories; decide primary method (pooled MCA recommended).
+- **Next**: Add social space MCA; render full QMD; interpret dimensions; label LCA classes.
+
+### 2026-02-24 (Session 2) — Social Space MCA
+- Discussed variable count concern for political space: 5 active vars (3 immigration) may produce artificially clean 2-dim solution. Caveat documented.
+- Implemented **Social Space MCA** in `1_analysis.qmd`: Oesch-8 (active) + income + education (respondent, mother, father) + domicil.
+- Complete cases: 38.2% with `income_quint_h` (25,706), 34.3% with `income_quint` (23,122). Adequate per country (ES: 11k, PT: 6k, IT: 5.5k, GR: 2.8k).
+- Benzécri results (social space): Dim 1 = 75–88% modified, Dim 2 = 8–15% modified. Clear capital volume axis.
+- Robustness check with `income_quint` confirms nearly identical structure.
+- New sections: data prep, MCA run, Benzécri tables/scree/summary, full category maps, **focused Oesch-8 map** with LCA repertoires + vote/abstention as supplementary, contributions, robustness.
+- Fixed FactoMineR category naming (shared labels get variable prefix; unique labels don't).
+- Party families (CHES / Party Manifesto) being prepared by user — will be added as supplementary.
+- **Project state**: Full analysis QMD with political space + social space + LCA. Not yet rendered. Data pipeline 01–08 functional. Master: 67,358 × 1,702.
+- **Next**: User to provide party family harmonisation; render full QMD; substantive interpretation.

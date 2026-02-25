@@ -74,7 +74,7 @@ participation_vars <- c("badge_d", "bctprd_d", "contplt_d",
                          "sgnptit_d", "pbldmn_d", "vote_d")
 
 sup_vars_socdem <- c("oesch8", "domicil_r", "income_quint_h",
-                      "eisced_5cat", "mother_edu_5cat", "father_edu_5cat")
+                      "eisced_5cat_h", "mother_edu_5cat", "father_edu_5cat")
 
 countries <- c("PT", "ES", "GR", "IT")
 country_labels <- c(PT = "Portugal", ES = "Spain", GR = "Greece", IT = "Italy")
@@ -767,24 +767,38 @@ for (cc in countries) {
 #| fig-width: 10
 #| fig-height: 8
 
+J <- length(active_vars)
+threshold_pol <- 1 / J
+
 mca_eig_plots <- list()
 for (cc in countries) {
   eig <- mca_results[[cc]]$eig
-  eig_df <- tibble(dim = 1:nrow(eig), pct = eig[, 2], cum = eig[, 3])
+  eig_df <- tibble(
+    dim = 1:nrow(eig),
+    eigenvalue = eig[, 1],
+    retained = eig[, 1] > threshold_pol
+  )
 
-  mca_eig_plots[[cc]] <- ggplot(eig_df %>% filter(dim <= 10),
-                                 aes(dim, pct)) +
-    geom_col(fill = plasma_pal(10)[6], width = 0.7) +
-    geom_line(aes(y = cum), colour = "grey40", linewidth = 0.6) +
-    geom_point(aes(y = cum), colour = "grey40", size = 1.5) +
-    scale_x_continuous(breaks = 1:10) +
-    labs(title = country_labels[cc], x = "Dimension", y = "% inertia") +
+  mca_eig_plots[[cc]] <- ggplot(eig_df, aes(dim, eigenvalue, fill = retained)) +
+    geom_col(width = 0.7, show.legend = FALSE) +
+    geom_hline(yintercept = threshold_pol, linetype = "dashed",
+               colour = "red", linewidth = 0.5) +
+    annotate("text", x = max(eig_df$dim) - 0.5, y = threshold_pol + 0.01,
+             label = paste0("1/J = ", round(threshold_pol, 3)),
+             colour = "red", size = 2.8, hjust = 1) +
+    scale_fill_manual(values = c("TRUE" = plasma_pal(10)[6],
+                                  "FALSE" = "grey75")) +
+    scale_x_continuous(breaks = seq(1, nrow(eig_df), by = 2)) +
+    labs(title = country_labels[cc], x = "Dimension", y = "Eigenvalue") +
     theme(plot.title = element_text(face = "bold", size = 11))
 }
 
 (mca_eig_plots[["PT"]] + mca_eig_plots[["ES"]]) /
 (mca_eig_plots[["GR"]] + mca_eig_plots[["IT"]]) +
-  plot_annotation(title = "Pooled MCA Scree Plots — Raw Rates (All Rounds Stacked)")
+  plot_annotation(
+    title = "Political Space: Raw Eigenvalues with Benzécri Threshold",
+    subtitle = "Coloured = retained (above 1/J) | Grey = discarded"
+  )
 ```
 
 ### Modified Eigenvalues (Benzécri Correction)
@@ -862,6 +876,71 @@ for (cc in countries) {
 }
 ```
 
+## Dimension Interpretation
+
+### Discrimination Measures (eta²)
+
+eta² indicates how well each active variable discriminates on each dimension.
+Higher values mean the variable contributes more to that dimension.
+
+```{r}
+#| label: pooled-mca-eta2
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": eta² (active variables) ===\n")
+  eta2 <- mca_results[[cc]]$var$eta2
+  print(round(eta2[, 1:2], 4))
+  cat("\n")
+}
+```
+
+### Top Contributing Categories (Dim 1 & 2)
+
+For each dimension: the categories contributing most to the axis, their cos²
+(quality of representation), and v.test (statistical significance of position).
+Contributions above the average threshold (100/Q = `r round(100 / sum(sapply(active_vars, function(v) nlevels(factor(df[[v]])))), 1)`%) are highlighted.
+
+```{r}
+#| label: pooled-mca-dimdesc
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], "===\n")
+  contrib <- as.data.frame(mca_results[[cc]]$var$contrib[, 1:2])
+  cos2   <- as.data.frame(mca_results[[cc]]$var$cos2[, 1:2])
+  vtest  <- as.data.frame(mca_results[[cc]]$var$v.test[, 1:2])
+  coord  <- as.data.frame(mca_results[[cc]]$var$coord[, 1:2])
+
+  diag_df <- tibble(
+    category = rownames(contrib),
+    coord_1 = coord[, 1], coord_2 = coord[, 2],
+    contrib_1 = contrib[, 1], contrib_2 = contrib[, 2],
+    cos2_1 = cos2[, 1], cos2_2 = cos2[, 2],
+    vtest_1 = vtest[, 1], vtest_2 = vtest[, 2]
+  )
+
+  Q <- nrow(diag_df)
+  threshold <- 100 / Q
+
+  cat("\nDim 1 — top contributors (threshold =", round(threshold, 1), "%):\n")
+  top1 <- diag_df %>%
+    filter(contrib_1 > threshold) %>%
+    arrange(desc(contrib_1)) %>%
+    select(category, coord = coord_1, contrib = contrib_1,
+           cos2 = cos2_1, v.test = vtest_1)
+  print(as.data.frame(top1), row.names = FALSE)
+
+  cat("\nDim 2 — top contributors:\n")
+  top2 <- diag_df %>%
+    filter(contrib_2 > threshold) %>%
+    arrange(desc(contrib_2)) %>%
+    select(category, coord = coord_2, contrib = contrib_2,
+           cos2 = cos2_2, v.test = vtest_2)
+  print(as.data.frame(top2), row.names = FALSE)
+}
+```
+
+### Category Maps
+
 ```{r}
 #| label: pooled-mca-category-maps
 #| fig-width: 12
@@ -907,6 +986,37 @@ for (cc in countries) {
 }
 ```
 
+### Supplementary v.test
+
+v.test assesses whether each supplementary category deviates significantly from
+the origin (|v.test| > 1.96 at α = 0.05). Positive values indicate a position
+on the positive side of the dimension; negative on the negative side.
+
+```{r}
+#| label: pooled-mca-sup-vtest
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Supplementary v.test (Dim 1-2) ===\n")
+  vt <- as.data.frame(round(mca_results[[cc]]$quali.sup$v.test[, 1:2], 2))
+  vt$sig_d1 <- ifelse(abs(vt[, 1]) > 1.96, "*", "")
+  vt$sig_d2 <- ifelse(abs(vt[, 2]) > 1.96, "*", "")
+  print(vt)
+  cat("\n")
+}
+```
+
+### Supplementary eta² (discrimination)
+
+```{r}
+#| label: pooled-mca-sup-eta2
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Supplementary eta² (Dim 1-2) ===\n")
+  print(round(mca_results[[cc]]$quali.sup$eta2[, 1:2], 4))
+  cat("\n")
+}
+```
+
 
 # Social Space Construction
 
@@ -921,7 +1031,7 @@ party vote — are projected as supplementary.
 
 - `oesch8` (8): Class position (Oesch 8-class scheme)
 - `income_quint_h` / `income_quint` (5): Household income quintile
-- `eisced_5cat` (5): Respondent's education (5-cat ISCED)
+- `eisced_5cat_h` (5): Respondent's education (5-cat ISCED, harmonised: eisced + edulvla)
 - `mother_edu_5cat` (5): Mother's education
 - `father_edu_5cat` (5): Father's education
 - `domicil_r` (4): Urbanisation
@@ -941,9 +1051,9 @@ adequate: ES ≈ 11k, PT ≈ 6k, IT ≈ 5.5k, GR ≈ 2.8k.
 #| label: social-space-setup
 
 # Social space variable sets
-social_active_h <- c("oesch8", "income_quint_h", "eisced_5cat",
+social_active_h <- c("oesch8", "income_quint_h", "eisced_5cat_h",
                       "mother_edu_5cat", "father_edu_5cat", "domicil_r")
-social_active_c <- c("oesch8", "income_quint", "eisced_5cat",
+social_active_c <- c("oesch8", "income_quint", "eisced_5cat_h",
                       "mother_edu_5cat", "father_edu_5cat", "domicil_r")
 
 # Oesch-8 short labels for plots
@@ -994,7 +1104,7 @@ for (cc in countries) {
     mutate(
       oesch8          = factor(oesch8, levels = 1:8, labels = oesch8_labels),
       income_quint_h  = factor(income_quint_h, levels = 1:5, labels = income_labels),
-      eisced_5cat     = factor(eisced_5cat, levels = 1:5, labels = edu_labels),
+      eisced_5cat_h   = factor(eisced_5cat_h, levels = 1:5, labels = edu_labels),
       mother_edu_5cat = factor(mother_edu_5cat, levels = 1:5, labels = edu_labels),
       father_edu_5cat = factor(father_edu_5cat, levels = 1:5, labels = edu_labels),
       domicil_r       = factor(domicil_r, levels = 1:4, labels = domicil_labels),
@@ -1014,7 +1124,7 @@ for (cc in countries) {
   }
 
   soc_input <- soc_data %>%
-    select(oesch8, income_quint_h, eisced_5cat,
+    select(oesch8, income_quint_h, eisced_5cat_h,
            mother_edu_5cat, father_edu_5cat, domicil_r,
            all_of(sup_cols_soc))
 
@@ -1037,24 +1147,37 @@ for (cc in countries) {
 #| fig-width: 10
 #| fig-height: 8
 
-# Raw scree plots
+threshold_soc <- 1 / J_soc
+
 soc_raw_plots <- list()
 for (cc in countries) {
   eig <- soc_results[[cc]]$eig
-  eig_df <- tibble(dim = 1:nrow(eig), pct = eig[, 2], cum = eig[, 3])
+  eig_df <- tibble(
+    dim = 1:nrow(eig),
+    eigenvalue = eig[, 1],
+    retained = eig[, 1] > threshold_soc
+  )
 
-  soc_raw_plots[[cc]] <- ggplot(eig_df %>% filter(dim <= 10), aes(dim, pct)) +
-    geom_col(fill = plasma_pal(10)[3], width = 0.7) +
-    geom_line(aes(y = cum), colour = "grey40", linewidth = 0.6) +
-    geom_point(aes(y = cum), colour = "grey40", size = 1.5) +
-    scale_x_continuous(breaks = 1:10) +
-    labs(title = country_labels[cc], x = "Dimension", y = "% inertia") +
+  soc_raw_plots[[cc]] <- ggplot(eig_df, aes(dim, eigenvalue, fill = retained)) +
+    geom_col(width = 0.7, show.legend = FALSE) +
+    geom_hline(yintercept = threshold_soc, linetype = "dashed",
+               colour = "red", linewidth = 0.5) +
+    annotate("text", x = max(eig_df$dim) - 0.5, y = threshold_soc + 0.01,
+             label = paste0("1/J = ", round(threshold_soc, 3)),
+             colour = "red", size = 2.8, hjust = 1) +
+    scale_fill_manual(values = c("TRUE" = plasma_pal(10)[3],
+                                  "FALSE" = "grey75")) +
+    scale_x_continuous(breaks = seq(1, nrow(eig_df), by = 2)) +
+    labs(title = country_labels[cc], x = "Dimension", y = "Eigenvalue") +
     theme(plot.title = element_text(face = "bold", size = 11))
 }
 
 (soc_raw_plots[["PT"]] + soc_raw_plots[["ES"]]) /
 (soc_raw_plots[["GR"]] + soc_raw_plots[["IT"]]) +
-  plot_annotation(title = "Social Space MCA — Raw Scree Plots")
+  plot_annotation(
+    title = "Social Space: Raw Eigenvalues with Benzécri Threshold",
+    subtitle = "Coloured = retained (above 1/J) | Grey = discarded"
+  )
 ```
 
 ```{r}
@@ -1121,6 +1244,62 @@ for (cc in countries) {
 }
 ```
 
+## Dimension Interpretation
+
+### Discrimination Measures (eta²)
+
+```{r}
+#| label: social-mca-eta2
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": eta² (active variables) ===\n")
+  eta2 <- soc_results[[cc]]$var$eta2
+  print(round(eta2[, 1:2], 4))
+  cat("\n")
+}
+```
+
+### Top Contributing Categories (Dim 1 & 2)
+
+```{r}
+#| label: social-mca-dimdesc
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], "===\n")
+  contrib <- as.data.frame(soc_results[[cc]]$var$contrib[, 1:2])
+  cos2   <- as.data.frame(soc_results[[cc]]$var$cos2[, 1:2])
+  vtest  <- as.data.frame(soc_results[[cc]]$var$v.test[, 1:2])
+  coord  <- as.data.frame(soc_results[[cc]]$var$coord[, 1:2])
+
+  diag_df <- tibble(
+    category = rownames(contrib),
+    coord_1 = coord[, 1], coord_2 = coord[, 2],
+    contrib_1 = contrib[, 1], contrib_2 = contrib[, 2],
+    cos2_1 = cos2[, 1], cos2_2 = cos2[, 2],
+    vtest_1 = vtest[, 1], vtest_2 = vtest[, 2]
+  )
+
+  Q <- nrow(diag_df)
+  threshold <- 100 / Q
+
+  cat("\nDim 1 — top contributors (threshold =", round(threshold, 1), "%):\n")
+  top1 <- diag_df %>%
+    filter(contrib_1 > threshold) %>%
+    arrange(desc(contrib_1)) %>%
+    select(category, coord = coord_1, contrib = contrib_1,
+           cos2 = cos2_1, v.test = vtest_1)
+  print(as.data.frame(top1), row.names = FALSE)
+
+  cat("\nDim 2 — top contributors:\n")
+  top2 <- diag_df %>%
+    filter(contrib_2 > threshold) %>%
+    arrange(desc(contrib_2)) %>%
+    select(category, coord = coord_2, contrib = contrib_2,
+           cos2 = cos2_2, v.test = vtest_2)
+  print(as.data.frame(top2), row.names = FALSE)
+}
+```
+
 ## Category Configuration Maps
 
 ```{r}
@@ -1141,13 +1320,13 @@ for (cc in countries) {
   coord$variable[coord$category %in% oesch8_labels]  <- "oesch8"
   coord$variable[coord$category %in% income_labels]   <- "income"
   coord$variable[coord$category %in% domicil_labels]  <- "domicil"
-  coord$variable[grepl("^eisced_5cat_", coord$category)]     <- "education"
+  coord$variable[grepl("^eisced_5cat_h_", coord$category)]    <- "education"
   coord$variable[grepl("^mother_edu_5cat_", coord$category)] <- "mother_edu"
   coord$variable[grepl("^father_edu_5cat_", coord$category)] <- "father_edu"
 
   # Clean labels: prefix education variables for readability
   coord$label <- coord$category
-  coord$label <- gsub("^eisced_5cat_", "Resp: ", coord$label)
+  coord$label <- gsub("^eisced_5cat_h_", "Resp: ", coord$label)
   coord$label <- gsub("^mother_edu_5cat_", "M: ", coord$label)
   coord$label <- gsub("^father_edu_5cat_", "F: ", coord$label)
 
@@ -1267,6 +1446,33 @@ for (cc in countries) {
 }
 ```
 
+### Supplementary v.test
+
+```{r}
+#| label: social-mca-sup-vtest
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Supplementary v.test (Dim 1-2) ===\n")
+  vt <- as.data.frame(round(soc_results[[cc]]$quali.sup$v.test[, 1:2], 2))
+  vt$sig_d1 <- ifelse(abs(vt[, 1]) > 1.96, "*", "")
+  vt$sig_d2 <- ifelse(abs(vt[, 2]) > 1.96, "*", "")
+  print(vt)
+  cat("\n")
+}
+```
+
+### Supplementary eta²
+
+```{r}
+#| label: social-mca-sup-eta2
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Supplementary eta² (Dim 1-2) ===\n")
+  print(round(soc_results[[cc]]$quali.sup$eta2[, 1:2], 4))
+  cat("\n")
+}
+```
+
 ## Variable Contributions
 
 ```{r}
@@ -1308,7 +1514,7 @@ for (cc in countries) {
     mutate(
       oesch8          = factor(oesch8, levels = 1:8, labels = oesch8_labels),
       income_quint    = factor(income_quint, levels = 1:5, labels = income_labels),
-      eisced_5cat     = factor(eisced_5cat, levels = 1:5, labels = edu_labels),
+      eisced_5cat_h   = factor(eisced_5cat_h, levels = 1:5, labels = edu_labels),
       mother_edu_5cat = factor(mother_edu_5cat, levels = 1:5, labels = edu_labels),
       father_edu_5cat = factor(father_edu_5cat, levels = 1:5, labels = edu_labels),
       domicil_r       = factor(domicil_r, levels = 1:4, labels = domicil_labels),
@@ -1326,7 +1532,7 @@ for (cc in countries) {
   }
 
   soc_input <- soc_data %>%
-    select(oesch8, income_quint, eisced_5cat,
+    select(oesch8, income_quint, eisced_5cat_h,
            mother_edu_5cat, father_edu_5cat, domicil_r,
            all_of(sup_cols_rob))
 
@@ -1357,6 +1563,637 @@ for (cc in countries) {
 ```
 
 
+# Class-Comparison Space
+
+MCA on **resource indicators only** (income, education, domicil) — without any
+class scheme as active. Oesch-8, ORDC, and EGP-11 are projected as
+supplementary barycentres. Categories within each scheme are connected by lines,
+revealing how different class typologies map onto the same resource space.
+
+Active variables (J = 5, Q = 24):
+
+- `income_quint_h` (5): Household income quintile
+- `eisced_5cat_h` (5): Respondent's education (harmonised)
+- `mother_edu_5cat` (5): Mother's education
+- `father_edu_5cat` (5): Father's education
+- `domicil_r` (4): Urbanisation
+
+Supplementary: `oesch8`, `ordc`, `egp11`, `essround`.
+
+```{r}
+#| label: class-comp-setup
+
+# Active resource variables (no class scheme)
+resource_active <- c("income_quint_h", "eisced_5cat_h",
+                     "mother_edu_5cat", "father_edu_5cat", "domicil_r")
+
+# ORDC short labels (exclude 996 = Unclassifiable)
+ordc_labels <- c(
+  "1"   = "Cult Upper",
+  "2"   = "Bal Upper",
+  "3"   = "Econ Upper",
+  "4"   = "Cult Up-Mid",
+  "5"   = "Bal Up-Mid",
+  "6.1" = "Econ Up-Mid(a)",
+  "6.2" = "Econ Up-Mid(b)",
+  "7"   = "Cult Lo-Mid",
+  "8"   = "Bal Lo-Mid",
+  "10"  = "Skill WC",
+  "11"  = "Unskill WC",
+  "12"  = "Primary"
+)
+
+# EGP-11 short labels
+egp_labels <- c(
+  "1"  = "I Hi Prof",
+  "2"  = "II Lo Prof",
+  "3"  = "IIIa Rout NM+",
+  "4"  = "IIIb Rout NM-",
+  "5"  = "IVa Sm Prop+",
+  "7"  = "IVc Farmer",
+  "8"  = "V Lo Tech",
+  "9"  = "VI Skill Man",
+  "10" = "VIIa Unskill",
+  "11" = "VIIb Farm Lab"
+)
+```
+
+```{r}
+#| label: class-comp-run
+#| cache: true
+
+comp_results <- list()
+comp_benzecri <- list()
+J_comp <- length(resource_active)
+
+for (cc in countries) {
+  cd <- df %>%
+    filter(cntry == cc) %>%
+    filter(if_all(all_of(resource_active), ~ !is.na(.)))
+
+  comp_data <- cd %>%
+    mutate(
+      income_quint_h  = factor(income_quint_h, levels = 1:5, labels = income_labels),
+      eisced_5cat_h   = factor(eisced_5cat_h, levels = 1:5, labels = edu_labels),
+      mother_edu_5cat = factor(mother_edu_5cat, levels = 1:5, labels = edu_labels),
+      father_edu_5cat = factor(father_edu_5cat, levels = 1:5, labels = edu_labels),
+      domicil_r       = factor(domicil_r, levels = 1:4, labels = domicil_labels),
+      # Supplementary class schemes
+      oesch8 = factor(oesch8, levels = 1:8, labels = oesch8_labels),
+      ordc   = factor(ordc, levels = names(ordc_labels), labels = ordc_labels),
+      egp11  = factor(egp11, levels = names(egp_labels), labels = egp_labels),
+      essround = factor(essround)
+    )
+
+  sup_cols_comp <- c("oesch8", "ordc", "egp11", "essround")
+
+  comp_input <- comp_data %>%
+    select(all_of(resource_active), all_of(sup_cols_comp))
+
+  # Drop rows where ALL supplementary class vars are NA (keep if at least 1 exists)
+  # FactoMineR handles NA in supplementary gracefully
+
+  cat("Class-comparison MCA for", country_labels[cc], ": n =", nrow(comp_input), "\n")
+
+  comp_results[[cc]] <- MCA(comp_input,
+                             quali.sup = which(names(comp_input) %in% sup_cols_comp),
+                             ncp = 5,
+                             graph = FALSE)
+
+  comp_benzecri[[cc]] <- benzecri_correction(comp_results[[cc]]$eig, J_comp)
+}
+```
+
+## Dimensionality
+
+```{r}
+#| label: class-comp-benzecri
+#| fig-width: 10
+#| fig-height: 8
+
+cat("Benzécri correction (J =", J_comp, ", threshold = 1/J =",
+    round(1/J_comp, 4), ")\n")
+
+for (cc in countries) {
+  bz <- comp_benzecri[[cc]]
+  cat("\n===", country_labels[cc], "===\n")
+  cat("Eigenvalues above threshold:", nrow(bz), "of",
+      nrow(comp_results[[cc]]$eig), "\n")
+  print(round(bz, 4))
+}
+```
+
+```{r}
+#| label: class-comp-scree
+#| fig-width: 10
+#| fig-height: 8
+
+threshold_comp <- 1 / J_comp
+
+comp_eig_plots <- list()
+for (cc in countries) {
+  eig <- comp_results[[cc]]$eig
+  eig_df <- tibble(
+    dim = 1:nrow(eig),
+    eigenvalue = eig[, 1],
+    retained = eig[, 1] > threshold_comp
+  )
+
+  comp_eig_plots[[cc]] <- ggplot(eig_df, aes(dim, eigenvalue, fill = retained)) +
+    geom_col(width = 0.7, show.legend = FALSE) +
+    geom_hline(yintercept = threshold_comp, linetype = "dashed",
+               colour = "red", linewidth = 0.5) +
+    annotate("text", x = max(eig_df$dim) - 0.5, y = threshold_comp + 0.01,
+             label = paste0("1/J = ", round(threshold_comp, 3)),
+             colour = "red", size = 2.8, hjust = 1) +
+    scale_fill_manual(values = c("TRUE" = plasma_pal(10)[8],
+                                  "FALSE" = "grey75")) +
+    scale_x_continuous(breaks = seq(1, nrow(eig_df), by = 2)) +
+    labs(title = country_labels[cc], x = "Dimension", y = "Eigenvalue") +
+    theme(plot.title = element_text(face = "bold", size = 11))
+}
+
+(comp_eig_plots[["PT"]] + comp_eig_plots[["ES"]]) /
+(comp_eig_plots[["GR"]] + comp_eig_plots[["IT"]]) +
+  plot_annotation(
+    title = "Class-Comparison Space: Raw Eigenvalues with Benzécri Threshold",
+    subtitle = "Coloured = retained (above 1/J) | Grey = discarded"
+  )
+```
+
+### Discrimination Measures (eta²)
+
+```{r}
+#| label: class-comp-eta2
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Active eta² ===\n")
+  print(round(comp_results[[cc]]$var$eta2[, 1:2], 4))
+  cat("\nSupplementary eta² (class schemes):\n")
+  print(round(comp_results[[cc]]$quali.sup$eta2[, 1:2], 4))
+  cat("\n")
+}
+```
+
+### Top Contributing Categories
+
+```{r}
+#| label: class-comp-dimdesc
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], "===\n")
+  contrib <- as.data.frame(comp_results[[cc]]$var$contrib[, 1:2])
+  cos2   <- as.data.frame(comp_results[[cc]]$var$cos2[, 1:2])
+  vtest  <- as.data.frame(comp_results[[cc]]$var$v.test[, 1:2])
+  coord  <- as.data.frame(comp_results[[cc]]$var$coord[, 1:2])
+
+  diag_df <- tibble(
+    category = rownames(contrib),
+    coord_1 = coord[, 1], coord_2 = coord[, 2],
+    contrib_1 = contrib[, 1], contrib_2 = contrib[, 2],
+    cos2_1 = cos2[, 1], cos2_2 = cos2[, 2],
+    vtest_1 = vtest[, 1], vtest_2 = vtest[, 2]
+  )
+
+  Q <- nrow(diag_df)
+  threshold <- 100 / Q
+
+  cat("\nDim 1 — top contributors (threshold =", round(threshold, 1), "%):\n")
+  top1 <- diag_df %>%
+    filter(contrib_1 > threshold) %>%
+    arrange(desc(contrib_1)) %>%
+    select(category, coord = coord_1, contrib = contrib_1,
+           cos2 = cos2_1, v.test = vtest_1)
+  print(as.data.frame(top1), row.names = FALSE)
+
+  cat("\nDim 2 — top contributors:\n")
+  top2 <- diag_df %>%
+    filter(contrib_2 > threshold) %>%
+    arrange(desc(contrib_2)) %>%
+    select(category, coord = coord_2, contrib = contrib_2,
+           cos2 = cos2_2, v.test = vtest_2)
+  print(as.data.frame(top2), row.names = FALSE)
+}
+```
+
+### Supplementary v.test (Class Schemes)
+
+```{r}
+#| label: class-comp-sup-vtest
+
+for (cc in countries) {
+  cat("\n===", country_labels[cc], ": Supplementary v.test (Dim 1-2) ===\n")
+  vt <- as.data.frame(round(comp_results[[cc]]$quali.sup$v.test[, 1:2], 2))
+  vt$sig_d1 <- ifelse(abs(vt[, 1]) > 1.96, "*", "")
+  vt$sig_d2 <- ifelse(abs(vt[, 2]) > 1.96, "*", "")
+  print(vt)
+  cat("\n")
+}
+```
+
+## Class Scheme Comparison Map
+
+Each class scheme's supplementary barycentres are plotted in the resource space.
+Categories within each scheme are connected by a path (ordered by Dim 1
+coordinate), showing how the scheme's hierarchy maps onto the capital volume axis.
+
+```{r}
+#| label: class-comp-map
+#| fig-width: 14
+#| fig-height: 12
+
+comp_plots <- list()
+for (cc in countries) {
+  bz <- comp_benzecri[[cc]]
+
+  # Get supplementary barycentres
+  sup_coord <- as.data.frame(comp_results[[cc]]$quali.sup$coord[, 1:2])
+  sup_coord$category <- rownames(sup_coord)
+
+  # Parse scheme from category name prefix
+  sup_coord$scheme <- NA_character_
+  sup_coord$label <- sup_coord$category
+
+  # Oesch-8 labels are unique (no prefix added by FactoMineR)
+  sup_coord$scheme[sup_coord$category %in% oesch8_labels] <- "Oesch-8"
+
+  # ORDC labels are unique
+  sup_coord$scheme[sup_coord$category %in% ordc_labels] <- "ORDC"
+
+  # EGP labels are unique
+  sup_coord$scheme[sup_coord$category %in% egp_labels] <- "EGP-11"
+
+  # Remove round barycentres (keep only class schemes)
+  class_coord <- sup_coord %>% filter(!is.na(scheme))
+
+  # Order within each scheme by Dim 1 for the connecting path
+  class_coord <- class_coord %>%
+    arrange(scheme, `Dim 1`)
+
+  p <- ggplot(class_coord, aes(`Dim 1`, `Dim 2`, colour = scheme)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    # Connecting paths (ordered by Dim 1)
+    geom_path(aes(group = scheme), linewidth = 0.5, alpha = 0.5) +
+    geom_point(size = 3, alpha = 0.8) +
+    ggrepel::geom_text_repel(aes(label = label), size = 2.4,
+                              max.overlaps = 35, show.legend = FALSE,
+                              segment.alpha = 0.3) +
+    scale_colour_manual(values = c("Oesch-8" = "#7B2D8E",
+                                    "ORDC"    = "#E6550D",
+                                    "EGP-11"  = "#31A354")) +
+    labs(title = country_labels[cc],
+         x = paste0("Dim 1 (", round(bz$modified_pct[1], 1), "%)"),
+         y = paste0("Dim 2 (", round(bz$modified_pct[2], 1), "%)"),
+         colour = "Class scheme") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          legend.position = "bottom")
+
+  comp_plots[[cc]] <- p
+}
+
+(comp_plots[["PT"]] + comp_plots[["ES"]]) /
+(comp_plots[["GR"]] + comp_plots[["IT"]]) +
+  plot_annotation(
+    title = "Class-Comparison Space: Oesch-8 / ORDC / EGP-11 in Resource Space",
+    subtitle = "Resource-only MCA (income, education, domicil). Class schemes projected as supplementary."
+  )
+```
+
+
+# Diachronic Trajectories
+
+Temporal trajectories of class barycentres across ESS rounds. For each class
+category (Oesch-8), we compute the mean coordinates (barycentre) of all
+individuals in that category for each round, then connect them with arrows
+showing the direction of movement.
+
+Two perspectives:
+
+1. **Political space**: how the political orientations of each class shift over time
+2. **Social space**: how structural positions shift (less expected movement)
+
+Party family trajectories will be added once the CHES/Party Manifesto
+harmonisation is complete.
+
+## Class Trajectories in Political Space
+
+```{r}
+#| label: trajectory-political
+#| fig-width: 14
+#| fig-height: 12
+
+pol_traj_plots <- list()
+for (cc in countries) {
+  # Individual coordinates from pooled MCA
+  ind_coord <- as.data.frame(mca_results[[cc]]$ind$coord[, 1:2])
+  names(ind_coord) <- c("Dim1", "Dim2")
+
+  # Get the data used for MCA (same filtering as pooled-mca chunk)
+  cd <- df %>%
+    filter(cntry == cc) %>%
+    filter(if_all(all_of(active_vars), ~ !is.na(.)))
+
+  ind_coord$oesch8 <- factor(cd$oesch8, levels = 1:8, labels = oesch8_labels)
+  ind_coord$essround <- cd$essround
+
+  # Filter to non-NA class and compute barycentres
+  traj <- ind_coord %>%
+    filter(!is.na(oesch8)) %>%
+    group_by(oesch8, essround) %>%
+    summarise(Dim1 = mean(Dim1), Dim2 = mean(Dim2), n = n(),
+              .groups = "drop") %>%
+    filter(n >= 30)  # minimum cell size
+
+  bz <- mca_benzecri[[cc]]
+
+  p <- ggplot(traj, aes(Dim1, Dim2, colour = oesch8)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_path(aes(group = oesch8), arrow = arrow(length = unit(0.08, "inches"),
+              type = "closed"), linewidth = 0.5, alpha = 0.6) +
+    geom_point(size = 1.5, alpha = 0.7) +
+    # Label first and last round for each class
+    ggrepel::geom_text_repel(
+      data = traj %>% group_by(oesch8) %>%
+        filter(essround == min(essround) | essround == max(essround)),
+      aes(label = paste0(oesch8, "\nR", essround)),
+      size = 2, max.overlaps = 30, show.legend = FALSE, segment.alpha = 0.3) +
+    scale_colour_viridis_d(option = "plasma", end = 0.9) +
+    labs(title = country_labels[cc],
+         x = paste0("Dim 1 (", round(bz$modified_pct[1], 1), "%)"),
+         y = paste0("Dim 2 (", round(bz$modified_pct[2], 1), "%)"),
+         colour = "Oesch-8") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          legend.position = "bottom",
+          legend.text = element_text(size = 7))
+
+  pol_traj_plots[[cc]] <- p
+}
+
+(pol_traj_plots[["PT"]] + pol_traj_plots[["ES"]]) /
+(pol_traj_plots[["GR"]] + pol_traj_plots[["IT"]]) +
+  plot_annotation(
+    title = "Oesch-8 Class Trajectories in Political Space",
+    subtitle = "Arrows show movement from earliest to latest round (min 30 obs per cell)"
+  )
+```
+
+## Class Trajectories in Social Space
+
+```{r}
+#| label: trajectory-social
+#| fig-width: 14
+#| fig-height: 12
+
+soc_traj_plots <- list()
+for (cc in countries) {
+  # Individual coordinates from social MCA
+  ind_coord <- as.data.frame(soc_results[[cc]]$ind$coord[, 1:2])
+  names(ind_coord) <- c("Dim1", "Dim2")
+
+  # Get the data used for social MCA
+  cd <- df %>%
+    filter(cntry == cc) %>%
+    filter(if_all(all_of(social_active_h), ~ !is.na(.)))
+
+  ind_coord$essround <- cd$essround
+
+  # Oesch-8 is already in the social space as active — use class variable directly
+  ind_coord$oesch8 <- factor(cd$oesch8, levels = 1:8, labels = oesch8_labels)
+
+  traj <- ind_coord %>%
+    filter(!is.na(oesch8)) %>%
+    group_by(oesch8, essround) %>%
+    summarise(Dim1 = mean(Dim1), Dim2 = mean(Dim2), n = n(),
+              .groups = "drop") %>%
+    filter(n >= 30)
+
+  bz <- soc_benzecri[[cc]]
+
+  p <- ggplot(traj, aes(Dim1, Dim2, colour = oesch8)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_path(aes(group = oesch8), arrow = arrow(length = unit(0.08, "inches"),
+              type = "closed"), linewidth = 0.5, alpha = 0.6) +
+    geom_point(size = 1.5, alpha = 0.7) +
+    ggrepel::geom_text_repel(
+      data = traj %>% group_by(oesch8) %>%
+        filter(essround == min(essround) | essround == max(essround)),
+      aes(label = paste0(oesch8, "\nR", essround)),
+      size = 2, max.overlaps = 30, show.legend = FALSE, segment.alpha = 0.3) +
+    scale_colour_viridis_d(option = "plasma", end = 0.9) +
+    labs(title = country_labels[cc],
+         x = paste0("Dim 1 (", round(bz$modified_pct[1], 1), "%)"),
+         y = paste0("Dim 2 (", round(bz$modified_pct[2], 1), "%)"),
+         colour = "Oesch-8") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          legend.position = "bottom",
+          legend.text = element_text(size = 7))
+
+  soc_traj_plots[[cc]] <- p
+}
+
+(soc_traj_plots[["PT"]] + soc_traj_plots[["ES"]]) /
+(soc_traj_plots[["GR"]] + soc_traj_plots[["IT"]]) +
+  plot_annotation(
+    title = "Oesch-8 Class Trajectories in Social Space",
+    subtitle = "Arrows show movement from earliest to latest round (min 30 obs per cell)"
+  )
+```
+
+
+# Cluster Analysis on MCA Coordinates
+
+Following Carvalho (2008) and the Craveiro workflow: hierarchical clustering
+(Ward's method) on MCA individual coordinates, followed by K-means
+consolidation. The `HCPC()` function from FactoMineR implements this two-step
+approach. Clustering is performed on all retained dimensions (ncp = 5) to use
+the full information, but visualised on Dim 1 × 2.
+
+## Political Space Clusters
+
+```{r}
+#| label: cluster-political-hcpc
+#| cache: true
+
+pol_hcpc <- list()
+for (cc in countries) {
+  cat("\n===", country_labels[cc], "===\n")
+  pol_hcpc[[cc]] <- HCPC(mca_results[[cc]], nb.clust = -1,
+                          consol = TRUE, graph = FALSE)
+  cat("Optimal K:", length(unique(pol_hcpc[[cc]]$data.clust$clust)), "\n")
+}
+```
+
+### Dendrogram & Cluster Map
+
+```{r}
+#| label: cluster-political-map
+#| fig-width: 14
+#| fig-height: 12
+
+pol_clust_plots <- list()
+for (cc in countries) {
+  hc <- pol_hcpc[[cc]]
+  # Coordinates from MCA, cluster assignment from HCPC
+  clust_data <- as.data.frame(mca_results[[cc]]$ind$coord[, 1:2])
+  names(clust_data) <- c("Dim1", "Dim2")
+  clust_data$cluster <- hc$data.clust$clust
+
+  bz <- mca_benzecri[[cc]]
+
+  p <- ggplot(clust_data, aes(Dim1, Dim2, colour = cluster)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_point(size = 0.3, alpha = 0.3) +
+    stat_ellipse(level = 0.8, linewidth = 0.6) +
+    scale_colour_viridis_d(option = "plasma", end = 0.85) +
+    labs(title = paste0(country_labels[cc], " (K = ",
+                        length(unique(clust_data$cluster)), ")"),
+         x = paste0("Dim 1 (", round(bz$modified_pct[1], 1), "%)"),
+         y = paste0("Dim 2 (", round(bz$modified_pct[2], 1), "%)"),
+         colour = "Cluster") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          legend.position = "bottom")
+
+  pol_clust_plots[[cc]] <- p
+}
+
+(pol_clust_plots[["PT"]] + pol_clust_plots[["ES"]]) /
+(pol_clust_plots[["GR"]] + pol_clust_plots[["IT"]]) +
+  plot_annotation(
+    title = "Political Space: Cluster Analysis (Ward + K-means consolidation)",
+    subtitle = "Points = individuals coloured by cluster | Ellipses = 80% concentration"
+  )
+```
+
+### Cluster Description
+
+```{r}
+#| label: cluster-political-desc
+
+for (cc in countries) {
+  hc <- pol_hcpc[[cc]]
+  K <- length(unique(hc$data.clust$clust))
+  cat("\n===", country_labels[cc], "(K =", K, ") ===\n")
+
+  # Cluster sizes
+  cat("\nCluster sizes:\n")
+  print(table(hc$data.clust$clust))
+
+  # Most characteristic categories per cluster (v.test)
+  cat("\nCharacteristic categories (|v.test| > 2):\n")
+  desc <- hc$desc.var$category
+  for (k in seq_along(desc)) {
+    cat("\n  Cluster", k, ":\n")
+    d <- as.data.frame(desc[[k]])
+    d$category <- rownames(d)
+    sig <- d %>%
+      filter(abs(v.test) > 2) %>%
+      arrange(desc(abs(v.test))) %>%
+      head(10)
+    if (nrow(sig) > 0) {
+      print(sig[, c("category", "v.test", "p.value")], row.names = FALSE)
+    } else {
+      cat("    (no categories with |v.test| > 2)\n")
+    }
+  }
+}
+```
+
+## Social Space Clusters
+
+```{r}
+#| label: cluster-social-hcpc
+#| cache: true
+
+soc_hcpc <- list()
+for (cc in countries) {
+  cat("\n===", country_labels[cc], "===\n")
+  soc_hcpc[[cc]] <- HCPC(soc_results[[cc]], nb.clust = -1,
+                          consol = TRUE, graph = FALSE)
+  cat("Optimal K:", length(unique(soc_hcpc[[cc]]$data.clust$clust)), "\n")
+}
+```
+
+```{r}
+#| label: cluster-social-map
+#| fig-width: 14
+#| fig-height: 12
+
+soc_clust_plots <- list()
+for (cc in countries) {
+  hc <- soc_hcpc[[cc]]
+  clust_data <- as.data.frame(soc_results[[cc]]$ind$coord[, 1:2])
+  names(clust_data) <- c("Dim1", "Dim2")
+  clust_data$cluster <- hc$data.clust$clust
+
+  bz <- soc_benzecri[[cc]]
+
+  p <- ggplot(clust_data, aes(Dim1, Dim2, colour = cluster)) +
+    geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+    geom_point(size = 0.3, alpha = 0.3) +
+    stat_ellipse(level = 0.8, linewidth = 0.6) +
+    scale_colour_viridis_d(option = "plasma", end = 0.85) +
+    labs(title = paste0(country_labels[cc], " (K = ",
+                        length(unique(clust_data$cluster)), ")"),
+         x = paste0("Dim 1 (", round(bz$modified_pct[1], 1), "%)"),
+         y = paste0("Dim 2 (", round(bz$modified_pct[2], 1), "%)"),
+         colour = "Cluster") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold", size = 11),
+          legend.position = "bottom")
+
+  soc_clust_plots[[cc]] <- p
+}
+
+(soc_clust_plots[["PT"]] + soc_clust_plots[["ES"]]) /
+(soc_clust_plots[["GR"]] + soc_clust_plots[["IT"]]) +
+  plot_annotation(
+    title = "Social Space: Cluster Analysis (Ward + K-means consolidation)",
+    subtitle = "Points = individuals coloured by cluster | Ellipses = 80% concentration"
+  )
+```
+
+### Cluster Description
+
+```{r}
+#| label: cluster-social-desc
+
+for (cc in countries) {
+  hc <- soc_hcpc[[cc]]
+  K <- length(unique(hc$data.clust$clust))
+  cat("\n===", country_labels[cc], "(K =", K, ") ===\n")
+
+  cat("\nCluster sizes:\n")
+  print(table(hc$data.clust$clust))
+
+  cat("\nCharacteristic categories (|v.test| > 2):\n")
+  desc <- hc$desc.var$category
+  for (k in seq_along(desc)) {
+    cat("\n  Cluster", k, ":\n")
+    d <- as.data.frame(desc[[k]])
+    d$category <- rownames(d)
+    sig <- d %>%
+      filter(abs(v.test) > 2) %>%
+      arrange(desc(abs(v.test))) %>%
+      head(10)
+    if (nrow(sig) > 0) {
+      print(sig[, c("category", "v.test", "p.value")], row.names = FALSE)
+    } else {
+      cat("    (no categories with |v.test| > 2)\n")
+    }
+  }
+}
+```
+
+
 # Save Workspace {.unnumbered}
 
 ```{r}
@@ -1367,10 +2204,13 @@ for (cc in countries) {
 save(
   df, mfa_results, mfa_inputs, mca_results, mca_benzecri,
   soc_results, soc_benzecri, soc_results_rob, soc_benzecri_rob,
+  comp_results, comp_benzecri,
+  pol_hcpc, soc_hcpc,
   lca_models, lca_selected, lca_fits, selected_k,
   active_vars, participation_vars, sup_vars_socdem, sup_all,
-  social_active_h, social_active_c,
+  social_active_h, social_active_c, resource_active,
   oesch8_labels, income_labels, edu_labels, domicil_labels, vote_labels,
+  ordc_labels, egp_labels,
   countries, country_labels,
   file = "saved/analysis.Rdata"
 )

@@ -137,10 +137,17 @@ Immigration 3-category scheme: 0–3/4–6/7–10 split maximises balance (no ce
 ### Social Space Variable Architecture
 | Role | Variables | Notes |
 |------|-----------|-------|
-| **Active** (social position) | `oesch8` (8), `income_quint_h` (5), `eisced_5cat` (5), `mother_edu_5cat` (5), `father_edu_5cat` (5), `domicil_r` (4) | J=6, Q=32; 38.2% complete cases (25,706/67,358). Bottleneck: intersection of class coding, income, and education missingness. |
+| **Active** (social position) | `oesch8` (8), `income_quint_h` (5), `eisced_5cat_h` (5), `mother_edu_5cat` (5), `father_edu_5cat` (5), `domicil_r` (4) | J=6, Q=32; ~49% complete cases (32,931/67,358). `eisced_5cat_h` = `coalesce(eisced_5cat, edulvla)`, recovered 13,701 respondents from early rounds. |
 | **Supplementary** (political behaviour) | `essround`, `vote_d`, `lca_class` | Vote/abstention + participation repertoires |
 | **Supplementary** (party vote) | Party families (CHES / Party Manifesto) | Harmonisation in progress |
-| **Robustness** | `income_quint` replaces `income_quint_h` | 34.3% complete cases; nearly identical eigenvalue structure |
+| **Robustness** | `income_quint` replaces `income_quint_h` | ~40% complete cases; nearly identical eigenvalue structure |
+
+### Class-Comparison Space Variable Architecture
+| Role | Variables | Notes |
+|------|-----------|-------|
+| **Active** (resources only) | `income_quint_h` (5), `eisced_5cat_h` (5), `mother_edu_5cat` (5), `father_edu_5cat` (5), `domicil_r` (4) | J=5, Q=24. No class scheme active. |
+| **Supplementary** (class schemes) | `oesch8` (8), `ordc` (12), `egp11` (10) | Connected by paths per scheme. Shows how typologies map onto resource space. |
+| **Supplementary** (round) | `essround` | Temporal position |
 
 ## Coding Strategy (Frozen)
 - **Primary analysis**: Disjunctive (categorical/indicator) coding of all attitudinal variables
@@ -275,3 +282,17 @@ All session logs are stored in `log/session_YYYY-MM-DD.md`. Always consult the m
 - Party families (CHES / Party Manifesto) being prepared by user — will be added as supplementary.
 - **Project state**: Full analysis QMD with political space + social space + LCA. Not yet rendered. Data pipeline 01–08 functional. Master: 67,358 × 1,702.
 - **Next**: User to provide party family harmonisation; render full QMD; substantive interpretation.
+
+### 2026-02-25 — Systematic MCA + Class-Comparison + Trajectories + Clustering
+- Updated social space to use `eisced_5cat_h` (harmonised education: `coalesce(eisced_5cat, edulvla)`). Coverage: 79.2% → 99.5%, social space complete cases: 38.2% → ~49%.
+- Also updated political space supplementary to use `eisced_5cat_h`.
+- Added **Class-Comparison Space**: resource-only MCA (income, education×3, domicil). Oesch-8, ORDC (12 classes), EGP-11 (10 classes) projected as supplementary with connecting lines. Benzécri: Dim 1 = 88% for PT.
+- Added **systematic MCA diagnostics** (Craveiro workflow) to all three spaces: eta², top contributing categories (contrib + cos² + v.test), supplementary v.test, supplementary eta². 66 chunks total.
+- Implemented **dual-colour Benzécri scree plots** for all three spaces: bars coloured by whether eigenvalue exceeds 1/J threshold, with threshold line.
+- Added **diachronic trajectory maps**: Oesch-8 class barycentres per round in both political and social spaces, connected by arrows showing temporal movement.
+- Added **cluster analysis** (Carvalho 2008 approach): `HCPC()` (Ward → K-means consolidation) on both political and social spaces. Cluster maps with 80% concentration ellipses + cluster descriptions (characteristic categories, v.test).
+- QMD: 2,220 lines, 66 chunks, 10 top-level sections. Structurally sound.
+- Party family trajectories deferred — user working on CHES/PMP harmonisation.
+- Master dimensions: 67,358 × 1,703.
+- **Project state**: Analysis QMD comprehensive with LCA, MFA, 3 MCA spaces (political, social, class-comparison), systematic diagnostics, trajectory maps, cluster analysis. Not yet rendered. Data pipeline 01–08 functional.
+- **Next**: Render full QMD; add party family data once harmonised; substantive interpretation.
